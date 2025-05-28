@@ -9,11 +9,6 @@ const generateToken = (id) => {
   });
 };
 
-// NÃO TEM MAIS A PRIMEIRA DEFINIÇÃO AQUI
-
-// @desc    Registrar um novo usuário final
-// @route   POST /api/auth/signup
-// @access  Public
 exports.signupUser = async (req, res, next) => {
   try {
     const { name, email, password, phone, cpf_cnpj } = req.body;
@@ -63,18 +58,17 @@ exports.signupUser = async (req, res, next) => {
     res.status(500).json({
       status: 'error',
       message: 'Algo deu errado no servidor ao tentar registrar o usuário.',
-      // errorDetails: process.env.NODE_ENV === 'development' ? error.message : undefined, // Você pode manter ou remover essas linhas de depuração na resposta
-      // errorStack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
   }
 };
 
-// Outras funções virão aqui, como a exports.loginUser que fizemos antes
+// exports.loginUser 
 exports.loginUser = async (req, res, next) => {
   console.log('LOGIN CONTROLLER: Iniciando processo de login...'); // Log 1
   try {
     const { email, password } = req.body;
     console.log('LOGIN CONTROLLER: Email recebido:', email); // Log 2
+
 
     // 1. Verificar se email e senha foram fornecidos
     if (!email || !password) {
@@ -91,16 +85,18 @@ exports.loginUser = async (req, res, next) => {
 
     if (!user) {
       console.log('LOGIN CONTROLLER: Usuário não encontrado com o email:', email); // Log 5
-      return res.status(401).json({ // 401 Unauthorized
+      return res.status(401).json({ 
         status: 'fail',
         message: 'Email ou senha incorretos.',
       });
     }
     console.log('LOGIN CONTROLLER: Usuário encontrado:', user.email); // Log 6
 
+
     // 3. Se encontrou usuário, comparar senha
     console.log('LOGIN CONTROLLER: Comparando senhas...'); // Log 7
     const isMatch = await user.comparePassword(password, user.password);
+
 
     if (!isMatch) {
       console.log('LOGIN CONTROLLER: Senha não confere para o usuário:', user.email); // Log 8
@@ -111,11 +107,12 @@ exports.loginUser = async (req, res, next) => {
     }
     console.log('LOGIN CONTROLLER: Senha correta!'); // Log 9
 
+
     // 4. Se tudo estiver ok, gerar e enviar o token para o cliente
     console.log('LOGIN CONTROLLER: Gerando token...'); // Log 10
     const token = generateToken(user._id);
 
-    user.password = undefined; // Remover a senha do output
+    user.password = undefined;
 
     console.log('LOGIN CONTROLLER: Enviando resposta de sucesso.'); // Log 11
     res.status(200).json({

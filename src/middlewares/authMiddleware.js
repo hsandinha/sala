@@ -1,4 +1,3 @@
-// src/middlewares/authMiddleware.js
 const jwt = require('jsonwebtoken');
 const User = require('../models/userModel'); // Precisamos do User model para buscar o usuário
 
