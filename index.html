@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador Interativo: Modelagem de Sistema de Coworking</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Visualization & Content Choices:
+        - Introdução: Textual overview of the system being designed. Goal: Orient. Method: HTML text.
+        - Modelo de Dados (MongoDB): For each collection (Users, Spaces, Rooms, Bookings), a card will display fields, types, and descriptions. Goal: Inform data structure. Method: Structured HTML/Tailwind. Interaction: Navigation via sidebar.
+        - Telas da Aplicação (React Native): Lists of screens grouped by Admin/User profiles and categories. Goal: Inform UI/UX flow. Method: Structured HTML/Tailwind. Interaction: Navigation via sidebar.
+        - Backend API (Node.js): Lists of API endpoints grouped by resource. Goal: Inform backend services. Method: Structured HTML/Tailwind with color-coded HTTP methods. Interaction: Navigation via sidebar.
+        - Considerações Adicionais: Bulleted list of key considerations. Goal: Inform. Method: HTML text.
+        - Diagrama do Sistema: A simple visual representation of the main system components (Frontend, Backend, Database) and their interaction, created using HTML and Tailwind CSS. Goal: Provide a high-level architectural overview. Method: HTML/Tailwind styled divs. Interaction: Static view.
+        - Justification: These choices directly map the source report's content into an interactive and digestible format, prioritizing clarity and ease of understanding for someone reviewing the system design. No SVG/Mermaid is used. Chart.js is included for potential future use or simple illustrative charts if data becomes available, but the primary visualization is the HTML-based diagram.
+    -->
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        .content-section {
+            display: none;
+        }
+        .content-section.active {
+            display: block;
+        }
+        .nav-link {
+            transition: all 0.3s ease;
+        }
+        .nav-link.active, .nav-link:hover {
+            background-color: #2563eb; /* blue-600 */
+            color: white;
+        }
+        .nav-link.active {
+            font-weight: 600;
+        }
+        .code-block {
+            background-color: #1f2937; /* gray-800 */
+            color: #d1d5db; /* gray-300 */
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-x: auto;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.875rem;
+            line-height: 1.25rem;
+            white-space: pre;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px; /* max-w-2xl */
+            margin-left: auto;
+            margin-right: auto;
+            height: 300px; /* Adjust as needed, e.g., h-72 or h-[300px] */
+            max-height: 400px; /* max-h-96 */
+        }
+        @media (min-width: 768px) { /* md breakpoint */
+            .chart-container {
+                height: 350px; /* Adjust as needed */
+            }
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800">
+    <div class="flex h-screen">
+        <aside class="w-64 bg-slate-800 text-slate-100 p-6 space-y-4 fixed top-0 left-0 h-full overflow-y-auto">
+            <h1 class="text-2xl font-bold text-white">Design do Sistema</h1>
+            <nav class="space-y-2">
+                <a href="#" class="nav-link block py-2 px-3 rounded-lg" data-target="intro">Introdução</a>
+                <div>
+                    <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mt-4 mb-1 px-3">Modelo de Dados</h3>
+                    <a href="#" class="nav-link block py-2 px-3 rounded-lg" data-target="db-users">Coleção: Users</a>
+                    <a href="#" class="nav-link block py-2 px-3 rounded-lg" data-target="db-spaces">Coleção: Spaces</a>
+                    <a href="#" class="nav-link block py-2 px-3 rounded-lg" data-target="db-rooms">Coleção: Rooms</a>
+                    <a href="#" class="nav-link block py-2 px-3 rounded-lg" data-target="db-bookings">Coleção: Bookings</a>
+                </div>
+                <div>
+                    <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mt-4 mb-1 px-3">Telas da Aplicação</h3>
+                    <a href="#" class="nav-link block py-2 px-3 rounded-lg" data-target="screens-admin">Perfil: Administrador</a>
+                    <a href="#" class="nav-link block py-2 px-3 rounded-lg" data-target="screens-user">Perfil: Usuário Final</a>
+                </div>
+                <div>
+                    <h3 class="text-sm font-semibold text-slate-400 uppercase tracking-wider mt-4 mb-1 px-3">Backend API</h3>
+                    <a href="#" class="nav-link block py-2 px-3 rounded-lg" data-target="api-auth">Autenticação</a>
+                    <a href="#" class="nav-link block py-2 px-3 rounded-lg" data-target="api-users">Recurso: Usuários</a>
+                    <a href="#" class="nav-link block py-2 px-3 rounded-lg" data-target="api-spaces">Recurso: Espaços</a>
+                    <a href="#" class="nav-link block py-2 px-3 rounded-lg" data-target="api-rooms">Recurso: Salas</a>
+                    <a href="#" class="nav-link block py-2 px-3 rounded-lg" data-target="api-bookings">Recurso: Reservas</a>
+                </div>
+                 <a href="#" class="nav-link block py-2 px-3 rounded-lg" data-target="diagram">Diagrama do Sistema</a>
+                <a href="#" class="nav-link block py-2 px-3 rounded-lg" data-target="considerations">Considerações Adicionais</a>
+            </nav>
+        </aside>
+
+        <main class="flex-1 ml-64 p-8 overflow-y-auto">
+            <div id="intro" class="content-section">
+                <h2 class="text-3xl font-bold text-blue-700 mb-6">Introdução à Modelagem do Sistema de Coworking</h2>
+                <p class="mb-4 text-lg leading-relaxed">
+                    Bem-vindo ao visualizador interativo da modelagem do sistema de agendamento de coworking e salas de reunião. Este documento digital apresenta a arquitetura e os componentes chave planejados para a aplicação, conforme detalhado no relatório original. O sistema é projetado para atender dois perfis principais: Administradores de espaços (responsáveis pela gestão das salas) e Usuários Finais (clientes que desejam alugar os espaços).
+                </p>
+                <p class="mb-4 text-lg leading-relaxed">
+                    A tecnologia base para este sistema inclui Node.js para o backend, React Native para o aplicativo móvel e MongoDB como banco de dados. Navegue pelas seções utilizando o menu à esquerda para explorar o modelo de dados, o design das telas para cada perfil de usuário, a estrutura da API backend e outras considerações importantes do projeto.
+                </p>
+                 <p class="mb-4 text-lg leading-relaxed">
+                    O objetivo desta visualização é fornecer uma compreensão clara e acessível de como o sistema será estruturado e como suas diferentes partes interagem.
+                </p>
+            </div>
+
+            <div id="db-users" class="content-section">
+                <h2 class="text-3xl font-bold text-blue-700 mb-6">Modelo de Dados: Coleção `users`</h2>
+                <p class="mb-4 text-lg leading-relaxed">Esta coleção armazena informações de todos os usuários do sistema, sejam eles administradores dos espaços ou usuários finais que realizam as reservas. O campo `role` distingue os dois tipos de usuários.</p>
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h3 class="text-xl font-semibold text-slate-700 mb-3">Campos da Coleção `users`:</h3>
+                    <div class="code-block">
+{
+  "_id": "ObjectId", // Chave primária
+  "name": "String", // Nome completo
+  "email": "String", // Email (único, para login)
+  "password": "String", // Senha (armazenar hash)
+  "role": "String", // "admin" ou "user"
+  "phone": "String", // (Opcional) Telefone de contato
+  "cpf_cnpj": "String", // (Opcional) Para identificação e faturamento
+  "createdAt": "Date",
+  "updatedAt": "Date"
+}
+                    </div>
+                </div>
+            </div>
+
+            <div id="db-spaces" class="content-section">
+                <h2 class="text-3xl font-bold text-blue-700 mb-6">Modelo de Dados: Coleção `spaces`</h2>
+                <p class="mb-4 text-lg leading-relaxed">A coleção `spaces` contém informações sobre os edifícios ou locais físicos de coworking que abrigam as diversas salas. Cada espaço é gerenciado por um administrador específico, referenciado pelo campo `adminId`.</p>
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h3 class="text-xl font-semibold text-slate-700 mb-3">Campos da Coleção `spaces`:</h3>
+                    <div class="code-block">
+{
+  "_id": "ObjectId",
+  "name": "String", // Ex: "Coworking Central SP", "Unidade Savassi BH"
+  "address": {
+    "street": "String",
+    "number": "String",
+    "complement": "String",
+    "neighborhood": "String",
+    "city": "String",
+    "state": "String",
+    "zipCode": "String",
+    "coordinates": { // Opcional, para mapas
+      "latitude": "Number",
+      "longitude": "Number"
+    }
+  },
+  "adminId": "ObjectId", // Referência ao usuário (admin) proprietário/gestor do espaço
+  "amenities": ["String"], // Ex: ["wifi", "cafeteria", "estacionamento"]
+  "operatingHours": { // Horários de funcionamento do espaço
+    "monday": { "open": "HH:MM", "close": "HH:MM", "isClosed": "Boolean" },
+    "tuesday": { "open": "HH:MM", "close": "HH:MM", "isClosed": "Boolean" }
+    // ... demais dias
+  },
+  "photos": ["String"], // URLs de fotos do espaço
+  "createdAt": "Date",
+  "updatedAt": "Date"
+}
+                    </div>
+                </div>
+            </div>
+
+            <div id="db-rooms" class="content-section">
+                <h2 class="text-3xl font-bold text-blue-700 mb-6">Modelo de Dados: Coleção `rooms`</h2>
+                <p class="mb-4 text-lg leading-relaxed">Esta coleção detalha cada sala de reunião individual ou posto de trabalho disponível para aluguel dentro de um `space`. Inclui informações sobre capacidade, tipo, comodidades, preços e períodos de manutenção.</p>
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h3 class="text-xl font-semibold text-slate-700 mb-3">Campos da Coleção `rooms`:</h3>
+                    <div class="code-block">
+{
+  "_id": "ObjectId",
+  "spaceId": "ObjectId", // Referência à coleção 'spaces'
+  "name": "String", // Ex: "Sala de Reunião Alfa", "Estação de Trabalho 05"
+  "type": "String", // Ex: "meeting_room", "coworking_desk", "private_office"
+  "capacity": "Number", // Número de pessoas que a sala comporta
+  "description": "String", // Descrição detalhada da sala
+  "amenities": ["String"], // Ex: ["projetor", "quadro_branco", "ar_condicionado"]
+  "photos": ["String"], // URLs de fotos da sala
+  "pricing": {
+    "perHour": "Number",
+    "perDay": "Number", // (Opcional)
+    "perMonth": "Number" // (Opcional, para escritórios privativos)
+  },
+  "isAvailable": "Boolean", // Status geral (pode ser dinâmico ou um default)
+  "maintenancePeriods": [ // Períodos em que a sala está indisponível para manutenção
+    {
+      "startDateTime": "Date",
+      "endDateTime": "Date",
+      "reason": "String"
+    }
+  ],
+  "createdAt": "Date",
+  "updatedAt": "Date"
+}
+                    </div>
+                </div>
+            </div>
+
+            <div id="db-bookings" class="content-section">
+                <h2 class="text-3xl font-bold text-blue-700 mb-6">Modelo de Dados: Coleção `bookings`</h2>
+                <p class="mb-4 text-lg leading-relaxed">A coleção `bookings` é crucial, pois armazena todas as informações sobre as reservas realizadas pelos usuários. Ela vincula um usuário (`userId`) a uma sala específica (`roomId`) por um determinado período, incluindo detalhes de pagamento e o status da reserva.</p>
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <h3 class="text-xl font-semibold text-slate-700 mb-3">Campos da Coleção `bookings`:</h3>
+                    <div class="code-block">
+{
+  "_id": "ObjectId",
+  "userId": "ObjectId", // Referência à coleção 'users' (quem reservou)
+  "roomId": "ObjectId", // Referência à coleção 'rooms' (qual sala)
+  "spaceId": "ObjectId", // Referência à coleção 'spaces' (em qual espaço, para facilitar consultas)
+  "startDateTime": "Date", // Data e hora de início da reserva
+  "endDateTime": "Date", // Data e hora de fim da reserva
+  "totalPrice": "Number", // Preço total calculado
+  "status": "String", // Ex: "pending_payment", "confirmed", "cancelled_by_user", "cancelled_by_admin", "completed", "no_show"
+  "protocolNumber": "String", // Número único de protocolo da reserva
+  "paymentDetails": {
+    "method": "String", // Ex: "credit_card", "pix", "bank_transfer", "cash_on_site"
+    "transactionId": "String", // (Opcional) ID da transação do gateway de pagamento
+    "status": "String", // Ex: "paid", "pending", "failed"
+    "paidAt": "Date" // Data do pagamento
+  },
+  "notes": "String", // (Opcional) Observações do usuário ou admin
+  "createdAt": "Date",
+  "updatedAt": "Date"
+}
+                    </div>
+                </div>
+            </div>
+
+            <div id="screens-admin" class="content-section">
+                <h2 class="text-3xl font-bold text-blue-700 mb-6">Telas da Aplicação: Perfil Administrador</h2>
+                <p class="mb-6 text-lg leading-relaxed">Esta seção descreve as telas planejadas para o perfil de Administrador. O administrador é responsável pela gestão completa dos espaços, salas, reservas e pagamentos, garantindo o bom funcionamento e a rentabilidade do coworking.</p>
+                
+                <div class="space-y-8">
+                    <div>
+                        <h3 class="text-2xl font-semibold text-slate-700 mb-3">Autenticação</h3>
+                        <ul class="list-disc list-inside bg-white p-6 rounded-xl shadow space-y-2 text-slate-700">
+                            <li><strong class="font-medium">LoginAdminScreen:</strong> Campos para email e senha. Link para "Esqueci minha senha".</li>
+                            <li><strong class="font-medium">ForgotPasswordAdminScreen:</strong> Campo para email para envio de link de redefinição.</li>
+                            <li><strong class="font-medium">ResetPasswordAdminScreen:</strong> Campos para nova senha e confirmação.</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="text-2xl font-semibold text-slate-700 mb-3">Dashboard/Home (Admin)</h3>
+                        <ul class="list-disc list-inside bg-white p-6 rounded-xl shadow space-y-2 text-slate-700">
+                            <li>Visão geral: Número de reservas para hoje/semana, salas mais ocupadas, receita recente.</li>
+                            <li>Atalhos para gerenciamento de salas, reservas e pagamentos.</li>
+                            <li>Notificações (novas reservas, pedidos de cancelamento).</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="text-2xl font-semibold text-slate-700 mb-3">Gerenciamento de Espaços</h3>
+                        <ul class="list-disc list-inside bg-white p-6 rounded-xl shadow space-y-2 text-slate-700">
+                            <li><strong class="font-medium">MySpacesScreen:</strong> Lista os espaços gerenciados pelo admin. Opção para adicionar novo espaço.</li>
+                            <li><strong class="font-medium">SpaceFormScreen:</strong> Formulário para criar/editar dados do espaço (nome, endereço, comodidades, horários, fotos).</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="text-2xl font-semibold text-slate-700 mb-3">Gerenciamento de Salas</h3>
+                        <ul class="list-disc list-inside bg-white p-6 rounded-xl shadow space-y-2 text-slate-700">
+                            <li><strong class="font-medium">RoomListScreen:</strong> Lista de salas (filtrável por espaço). Opção para adicionar nova sala. Exibe nome, tipo, capacidade, status.</li>
+                            <li><strong class="font-medium">RoomFormScreen:</strong> Formulário para criar/editar dados da sala (nome, tipo, capacidade, descrição, comodidades, fotos, preços).</li>
+                            <li><strong class="font-medium">RoomAvailabilityScreen:</strong> Visualização em calendário da disponibilidade. Opção para bloquear/desbloquear horários (manutenção). Adicionar/editar/remover períodos de manutenção.</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="text-2xl font-semibold text-slate-700 mb-3">Gerenciamento de Reservas (Admin)</h3>
+                        <ul class="list-disc list-inside bg-white p-6 rounded-xl shadow space-y-2 text-slate-700">
+                            <li><strong class="font-medium">BookingListAdminScreen:</strong> Lista de todas as reservas com filtros (data, sala, status, usuário). Exibe protocolo, sala, usuário, data/hora, status.</li>
+                            <li><strong class="font-medium">BookingDetailAdminScreen:</strong> Detalhes completos da reserva. Opções para confirmar reserva, registrar pagamento, cancelar reserva.</li>
+                        </ul>
+                    </div>
+                    
+                    <div>
+                        <h3 class="text-2xl font-semibold text-slate-700 mb-3">Gerenciamento de Pagamentos (Admin)</h3>
+                        <ul class="list-disc list-inside bg-white p-6 rounded-xl shadow space-y-2 text-slate-700">
+                            <li><strong class="font-medium">PaymentListAdminScreen:</strong> Lista de transações/pagamentos com filtros. Visualizar status (pago, pendente, falhou). Pode ser integrado à `BookingDetailAdminScreen`.</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="text-2xl font-semibold text-slate-700 mb-3">Configurações (Admin)</h3>
+                        <ul class="list-disc list-inside bg-white p-6 rounded-xl shadow space-y-2 text-slate-700">
+                            <li><strong class="font-medium">AdminProfileScreen:</strong> Editar dados do perfil do administrador.</li>
+                            <li><strong class="font-medium">NotificationSettingsAdminScreen:</strong> Configurar preferências de notificação.</li>
+                            <li><strong class="font-medium">OperatingHoursSpaceScreen:</strong> Gerenciar horários de funcionamento padrão do(s) espaço(s).</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div id="screens-user" class="content-section">
+                <h2 class="text-3xl font-bold text-blue-700 mb-6">Telas da Aplicação: Perfil Usuário Final</h2>
+                <p class="mb-6 text-lg leading-relaxed">Aqui são detalhadas as telas para o Usuário Final – o cliente que busca alugar salas de coworking ou reunião. O foco é na facilidade de busca, reserva e gerenciamento das suas próprias locações.</p>
+
+                <div class="space-y-8">
+                    <div>
+                        <h3 class="text-2xl font-semibold text-slate-700 mb-3">Autenticação</h3>
+                        <ul class="list-disc list-inside bg-white p-6 rounded-xl shadow space-y-2 text-slate-700">
+                            <li><strong class="font-medium">LoginUserScreen:</strong> Campos para email e senha. Links para "Esqueci minha senha" e "Cadastre-se".</li>
+                            <li><strong class="font-medium">SignUpUserScreen:</strong> Formulário de cadastro (nome, email, senha, etc.).</li>
+                            <li><strong class="font-medium">ForgotPasswordUserScreen:</strong> Campo para email para envio de link de redefinição.</li>
+                            <li><strong class="font-medium">ResetPasswordUserScreen:</strong> Campos para nova senha e confirmação.</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="text-2xl font-semibold text-slate-700 mb-3">Home/Explorar Salas</h3>
+                        <ul class="list-disc list-inside bg-white p-6 rounded-xl shadow space-y-2 text-slate-700">
+                            <li><strong class="font-medium">RoomSearchScreen / ExploreRoomsScreen:</strong>
+                                <ul class="list-disc list-inside ml-6">
+                                    <li>Filtros: Localização, Data e Hora, Tipo de sala, Capacidade, Comodidades.</li>
+                                    <li>Exibição dos resultados: Lista de salas disponíveis com foto, nome, capacidade, preço/hora.</li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="text-2xl font-semibold text-slate-700 mb-3">Detalhes da Sala</h3>
+                        <ul class="list-disc list-inside bg-white p-6 rounded-xl shadow space-y-2 text-slate-700">
+                            <li><strong class="font-medium">RoomDetailUserScreen:</strong>
+                                <ul class="list-disc list-inside ml-6">
+                                    <li>Carrossel de fotos, descrição completa, comodidades, capacidade, localização (mapa).</li>
+                                    <li>Preço, calendário de disponibilidade detalhada.</li>
+                                    <li>Seletores para data e horário de início e fim da reserva.</li>
+                                    <li>Botão "Reservar Agora".</li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="text-2xl font-semibold text-slate-700 mb-3">Processo de Reserva</h3>
+                        <ul class="list-disc list-inside bg-white p-6 rounded-xl shadow space-y-2 text-slate-700">
+                            <li><strong class="font-medium">BookingSummaryScreen:</strong> Resumo da sala, data, horário, duração, preço total. Campos para informações adicionais. Botão "Prosseguir para Pagamento" / "Confirmar Reserva".</li>
+                            <li><strong class="font-medium">PaymentScreen:</strong> (Se integrado com gateway) Opções de pagamento, formulário de dados.</li>
+                            <li><strong class="font-medium">BookingConfirmationScreen:</strong> Mensagem de sucesso, Número de Protocolo, detalhes da reserva, instruções.</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="text-2xl font-semibold text-slate-700 mb-3">Minhas Reservas</h3>
+                        <ul class="list-disc list-inside bg-white p-6 rounded-xl shadow space-y-2 text-slate-700">
+                            <li><strong class="font-medium">MyBookingsScreen:</strong> Lista das reservas do usuário (Próximas, Passadas, Canceladas). Exibe sala, data/hora, status, protocolo.</li>
+                            <li><strong class="font-medium">BookingDetailUserScreen (View):</strong> Detalhes de uma reserva. Opção de "Cancelar Reserva", "Ver no Mapa".</li>
+                        </ul>
+                    </div>
+
+                    <div>
+                        <h3 class="text-2xl font-semibold text-slate-700 mb-3">Perfil do Usuário</h3>
+                        <ul class="list-disc list-inside bg-white p-6 rounded-xl shadow space-y-2 text-slate-700">
+                            <li><strong class="font-medium">UserProfileScreen:</strong> Visualizar e editar dados do perfil.</li>
+                            <li><strong class="font-medium">PaymentMethodsUserScreen:</strong> (Opcional) Gerenciar métodos de pagamento salvos.</li>
+                            <li><strong class="font-medium">NotificationSettingsUserScreen:</strong> Configurar preferências de notificação.</li>
+                            <li><strong class="font-medium">Help/SupportScreen:</strong> Informações de contato, FAQ.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div id="api-auth" class="content-section">
+                <h2 class="text-3xl font-bold text-blue-700 mb-6">Backend API: Autenticação (`/auth`)</h2>
+                <p class="mb-4 text-lg leading-relaxed">Endpoints responsáveis pelo registro, login e gerenciamento de senhas dos usuários.</p>
+                <div class="bg-white p-6 rounded-xl shadow-lg space-y-3">
+                    <div class="flex items-center"><span class="inline-block bg-green-500 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">POST</span> <code>/signup</code> (usuário final)</div>
+                    <div class="flex items-center"><span class="inline-block bg-green-500 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">POST</span> <code>/login</code> (ambos os perfis)</div>
+                    <div class="flex items-center"><span class="inline-block bg-green-500 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">POST</span> <code>/admin/signup</code> (criação de admins)</div>
+                    <div class="flex items-center"><span class="inline-block bg-green-500 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">POST</span> <code>/forgot-password</code></div>
+                    <div class="flex items-center"><span class="inline-block bg-green-500 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">POST</span> <code>/reset-password</code></div>
+                </div>
+            </div>
+            <div id="api-users" class="content-section">
+                <h2 class="text-3xl font-bold text-blue-700 mb-6">Backend API: Recurso Usuários (`/users`)</h2>
+                <p class="mb-4 text-lg leading-relaxed">Endpoints para gerenciamento de informações de perfis de usuários.</p>
+                <div class="bg-white p-6 rounded-xl shadow-lg space-y-3">
+                    <div class="flex items-center"><span class="inline-block bg-sky-500 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">GET</span> <code>/me</code> (perfil do usuário logado)</div>
+                    <div class="flex items-center"><span class="inline-block bg-yellow-500 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">PUT</span> <code>/me</code> (atualizar perfil)</div>
+                    <div class="flex items-center"><span class="inline-block bg-sky-500 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">GET</span> <code>/</code> (Admin: listar usuários)</div>
+                    <div class="flex items-center"><span class="inline-block bg-sky-500 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">GET</span> <code>/:id</code> (Admin: ver usuário específico)</div>
+                </div>
+            </div>
+            <div id="api-spaces" class="content-section">
+                <h2 class="text-3xl font-bold text-blue-700 mb-6">Backend API: Recurso Espaços (`/spaces`)</h2>
+                <p class="mb-4 text-lg leading-relaxed">Endpoints para administradores gerenciarem os espaços de coworking.</p>
+                <div class="bg-white p-6 rounded-xl shadow-lg space-y-3">
+                    <div class="flex items-center"><span class="inline-block bg-green-500 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">POST</span> <code>/</code> (criar espaço)</div>
+                    <div class="flex items-center"><span class="inline-block bg-sky-500 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">GET</span> <code>/</code> (listar espaços)</div>
+                    <div class="flex items-center"><span class="inline-block bg-sky-500 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">GET</span> <code>/:id</code> (detalhes do espaço)</div>
+                    <div class="flex items-center"><span class="inline-block bg-yellow-500 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">PUT</span> <code>/:id</code> (atualizar espaço)</div>
+                    <div class="flex items-center"><span class="inline-block bg-red-500 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">DELETE</span> <code>/:id</code> (deletar espaço)</div>
+                </div>
+            </div>
+            <div id="api-rooms" class="content-section">
+                <h2 class="text-3xl font-bold text-blue-700 mb-6">Backend API: Recurso Salas (`/rooms`)</h2>
+                <p class="mb-4 text-lg leading-relaxed">Endpoints para gerenciamento de salas (criação, atualização, listagem para usuários e admins).</p>
+                <div class="bg-white p-6 rounded-xl shadow-lg space-y-3">
+                    <div class="flex items-center"><span class="inline-block bg-green-500 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">POST</span> <code>/</code> (Admin: criar sala)</div>
+                    <div class="flex items-center"><span class="inline-block bg-yellow-500 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">PUT</span> <code>/:id</code> (Admin: atualizar sala)</div>
+                    <div class="flex items-center"><span class="inline-block bg-red-500 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">DELETE</span> <code>/:id</code> (Admin: deletar sala)</div>
+                    <div class="flex items-center"><span class="inline-block bg-green-500 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">POST</span> <code>/:id/maintenance</code> (Admin: adicionar período de manutenção)</div>
+                    <div class="flex items-center"><span class="inline-block bg-red-500 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">DELETE</span> <code>/:id/maintenance/:maintenanceId</code> (Admin: remover período de manutenção)</div>
+                    <div class="flex items-center"><span class="inline-block bg-sky-500 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">GET</span> <code>/</code> (Público/Usuário: listar salas com filtros)</div>
+                    <div class="flex items-center"><span class="inline-block bg-sky-500 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">GET</span> <code>/:id</code> (Público/Usuário: detalhes públicos da sala)</div>
+                </div>
+            </div>
+            <div id="api-bookings" class="content-section">
+                <h2 class="text-3xl font-bold text-blue-700 mb-6">Backend API: Recurso Reservas (`/bookings`)</h2>
+                <p class="mb-4 text-lg leading-relaxed">Endpoints para usuários criarem e gerenciarem suas reservas, e para administradores gerenciarem todas as reservas.</p>
+                <div class="bg-white p-6 rounded-xl shadow-lg space-y-3">
+                    <div class="flex items-center"><span class="inline-block bg-green-500 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">POST</span> <code>/</code> (Usuário: criar nova reserva)</div>
+                    <div class="flex items-center"><span class="inline-block bg-sky-500 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">GET</span> <code>/my-bookings</code> (Usuário: listar suas reservas)</div>
+                    <div class="flex items-center"><span class="inline-block bg-sky-500 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">GET</span> <code>/my-bookings/:id</code> (Usuário: detalhes de sua reserva)</div>
+                    <div class="flex items-center"><span class="inline-block bg-yellow-500 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">PUT</span> <code>/my-bookings/:id/cancel</code> (Usuário: cancelar sua reserva)</div>
+                    <div class="flex items-center"><span class="inline-block bg-sky-500 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">GET</span> <code>/</code> (Admin: listar todas as reservas)</div>
+                    <div class="flex items-center"><span class="inline-block bg-sky-500 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">GET</span> <code>/:id</code> (Admin: detalhes de qualquer reserva)</div>
+                    <div class="flex items-center"><span class="inline-block bg-yellow-500 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">PUT</span> <code>/:id/status</code> (Admin: atualiza status da reserva)</div>
+                    <div class="flex items-center"><span class="inline-block bg-green-500 text-white text-xs font-semibold mr-2 px-2.5 py-0.5 rounded">POST</span> <code>/:id/payment</code> (Admin: registra pagamento manual)</div>
+                </div>
+            </div>
+            
+            <div id="diagram" class="content-section">
+                <h2 class="text-3xl font-bold text-blue-700 mb-6">Diagrama Simplificado do Sistema</h2>
+                <p class="mb-6 text-lg leading-relaxed">Este diagrama oferece uma visão de alto nível dos principais componentes do sistema de coworking e como eles se interconectam. Ele ilustra a arquitetura geral, mostrando o fluxo de interação entre o usuário final (através do aplicativo React Native), o servidor backend (Node.js) e o banco de dados (MongoDB).</p>
+                <div class="bg-white p-8 rounded-xl shadow-lg">
+                    <div class="flex flex-col md:flex-row justify-around items-center space-y-8 md:space-y-0 md:space-x-8">
+                        <div class="text-center p-6 border-2 border-blue-500 rounded-lg shadow-md w-full md:w-1/3">
+                            <div class="text-5xl mb-3">📱</div>
+                            <h3 class="text-xl font-semibold text-blue-700 mb-2">Frontend</h3>
+                            <p class="text-sm text-slate-600">Aplicativo Móvel (React Native)</p>
+                            <p class="text-xs mt-2">Interface do Usuário (Admin & Cliente)</p>
+                        </div>
+
+                        <div class="text-4xl text-slate-500 hidden md:block transform rotate-90 md:rotate-0">⇄</div>
+                         <div class="text-4xl text-slate-500 md:hidden">⇅</div>
+
+
+                        <div class="text-center p-6 border-2 border-green-500 rounded-lg shadow-md w-full md:w-1/3">
+                            <div class="text-5xl mb-3">⚙️</div>
+                            <h3 class="text-xl font-semibold text-green-700 mb-2">Backend</h3>
+                            <p class="text-sm text-slate-600">Servidor API (Node.js / Express.js)</p>
+                            <p class="text-xs mt-2">Lógica de Negócios, Autenticação, Gerenciamento de Dados</p>
+                        </div>
+                        
+                        <div class="text-4xl text-slate-500 hidden md:block transform rotate-90 md:rotate-0">⇄</div>
+                        <div class="text-4xl text-slate-500 md:hidden">⇅</div>
+
+                        <div class="text-center p-6 border-2 border-purple-500 rounded-lg shadow-md w-full md:w-1/3">
+                            <div class="text-5xl mb-3">💾</div>
+                            <h3 class="text-xl font-semibold text-purple-700 mb-2">Banco de Dados</h3>
+                            <p class="text-sm text-slate-600">MongoDB</p>
+                            <p class="text-xs mt-2">Armazenamento Persistente (Usuários, Salas, Reservas)</p>
+                        </div>
+                    </div>
+                    <p class="mt-8 text-center text-slate-600">
+                        O usuário interage com o aplicativo React Native, que envia requisições para a API Node.js. A API processa essas requisições, interage com o banco de dados MongoDB para ler ou gravar dados, e retorna respostas para o aplicativo.
+                    </p>
+                </div>
+            </div>
+
+            <div id="considerations" class="content-section">
+                <h2 class="text-3xl font-bold text-blue-700 mb-6">Considerações Adicionais</h2>
+                <p class="mb-4 text-lg leading-relaxed">Além do modelo de dados, telas e API, o desenvolvimento do sistema de coworking deve levar em conta os seguintes aspectos cruciais para o sucesso e robustez da aplicação:</p>
+                <div class="bg-white p-6 rounded-xl shadow-lg">
+                    <ul class="list-disc list-inside space-y-3 text-slate-700">
+                        <li><strong class="font-medium">Pagamento:</strong> Integração com um gateway de pagamento (Stripe, PagSeguro, Mercado Pago, etc.) é fundamental. Definir se o pagamento é obrigatório no ato da reserva ou se pode ser feito depois/no local.</li>
+                        <li><strong class="font-medium">Notificações:</strong> Implementar notificações por email (usando, por exemplo, Nodemailer) e/ou push (via FCM - Firebase Cloud Messaging) para confirmações, lembretes, cancelamentos de reserva, alterações e solicitações de pagamento.</li>
+                        <li><strong class="font-medium">Disponibilidade em Tempo Real:</strong> A lógica para verificar a disponibilidade das salas precisa ser robusta e eficiente, consultando as coleções `bookings` e `rooms.maintenancePeriods` para o intervalo de tempo desejado, evitando conflitos de agendamento.</li>
+                        <li><strong class="font-medium">Segurança:</strong> Validar todas as entradas de dados, usar HTTPS para comunicação, proteger contra vulnerabilidades comuns (XSS, CSRF, SQL Injection - embora NoSQL, princípios de sanitização se aplicam), e armazenar senhas com hash seguro (ex: bcryptjs).</li>
+                        <li><strong class="font-medium">Testes:</strong> Planejar e executar testes unitários, de integração e End-to-End (E2E) para garantir a qualidade e confiabilidade do software.</li>
+                        <li><strong class="font-medium">Escalabilidade:</strong> Projetar a arquitetura pensando em crescimento futuro, tanto em número de usuários quanto em volume de dados e transações.</li>
+                        <li><strong class="font-medium">Usabilidade (UX/UI):</strong> Além das telas listadas, focar em uma interface intuitiva e uma experiência de usuário agradável em todo o aplicativo React Native.</li>
+                    </ul>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const navLinks = document.querySelectorAll('.nav-link');
+            const contentSections = document.querySelectorAll('.content-section');
+            const firstLink = document.querySelector('.nav-link[data-target="intro"]');
+            const firstSection = document.getElementById('intro');
+
+            function showSection(targetId) {
+                contentSections.forEach(section => {
+                    section.classList.remove('active');
+                });
+                navLinks.forEach(link => {
+                    link.classList.remove('active');
+                });
+
+                const targetSection = document.getElementById(targetId);
+                if (targetSection) {
+                    targetSection.classList.add('active');
+                }
+                const activeLink = document.querySelector(`.nav-link[data-target="${targetId}"]`);
+                if (activeLink) {
+                    activeLink.classList.add('active');
+                }
+            }
+
+            navLinks.forEach(link => {
+                link.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const targetId = this.dataset.target;
+                    showSection(targetId);
+                    // Scroll to top of content area on section change
+                    document.querySelector('main').scrollTop = 0;
+                });
+            });
+
+            // Show the intro section by default
+            if (firstLink && firstSection) {
+                showSection('intro');
+            }
+        });
+    </script>
+</body>
+</html>
