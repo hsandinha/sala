@@ -281,13 +281,10 @@ exports.resetPassword = async (req, res, next) => {
             message: 'As senhas não coincidem.'
         });
     }
-
-    // O userModel tem validação de minlength para senha
     user.password = req.body.password;
-    // Limpar os campos de reset de senha do documento do usuário
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
-    await user.save(); // O hook pre-save no userModel vai hashear a nova senha automaticamente
+    await user.save();
 
 
     console.log('RESET PASSWORD CONTROLLER: Senha resetada com sucesso para:', user.email);
@@ -298,7 +295,7 @@ exports.resetPassword = async (req, res, next) => {
 
   } catch (error) {
     console.error("ERRO EM RESET PASSWORD CONTROLLER:", error);
-    if (error.name === 'ValidationError') { // Erro de validação da senha (ex: minlength)
+    if (error.name === 'ValidationError') { 
         const messages = Object.values(error.errors).map(val => val.message);
         return res.status(400).json({
             status: 'fail',

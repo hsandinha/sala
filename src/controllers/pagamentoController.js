@@ -1,15 +1,11 @@
-// src/controllers/pagamentoController.js
 const Pagamento = require('../models/pagamentoModel');
-const Reserva = require('../models/reservaModel'); // Precisamos do Reserva model para buscar e atualizar a reserva
-const User = require('../models/usuarioModel'); // Para verificar o cliente
+const Reserva = require('../models/reservaModel');
+const User = require('../models/usuarioModel');
 
-// @desc    Cliente cria um novo pagamento para uma reserva específica
-// @route   POST /api/reservas/:reservaId/pagamentos
-// @access  Private (usuário logado)
 exports.createPagamentoParaReserva = async (req, res, next) => {
   const { reservaId } = req.params; // ID da reserva vindo da URL
-  const clienteId = req.user.id;    // ID do cliente logado (do middleware 'protect')
-  const { valor, metodo_pagamento, id_transacao_gateway, gateway_response } = req.body; // Dados do pagamento
+  const clienteId = req.user.id;    
+  const { valor, metodo_pagamento, id_transacao_gateway, gateway_response } = req.body; 
 
   console.log(`CREATEPAGAMENTOPARARESERVA: Usuário ${clienteId} tentando pagar reserva ${reservaId}`);
   console.log('Dados do pagamento recebidos:', req.body);
@@ -55,19 +51,16 @@ exports.createPagamentoParaReserva = async (req, res, next) => {
             message: 'Valor e método de pagamento são obrigatórios.'
         });
     }
-    // Em um cenário real, o 'valor' deveria ser validado contra o preço calculado da reserva.
-    // Por simplicidade, estamos aceitando o valor enviado no corpo.
 
     // 6. Criar o documento de Pagamento
-    // Assumimos que o pagamento é bem-sucedido imediatamente (simulação)
     const novoPagamento = await Pagamento.create({
       reserva_id: reservaId,
       cliente_id: clienteId,
-      valor, // Valor recebido do req.body
-      metodo_pagamento, // Método recebido do req.body
-      status: 'pago', // Marcamos como 'pago' diretamente, pois estamos simulando
-      id_transacao_gateway: id_transacao_gateway || `sim_${Date.now()}`, // Simulação de ID de transação
-      gateway_response: gateway_response || { simulation: 'success', timestamp: new Date() }, // Simulação de resposta
+      valor, 
+      metodo_pagamento, 
+      status: 'pago', 
+      id_transacao_gateway: id_transacao_gateway || `sim_${Date.now()}`,
+      gateway_response: gateway_response || { simulation: 'success', timestamp: new Date() }, 
     });
     console.log(`CREATEPAGAMENTOPARARESERVA: Pagamento ${novoPagamento._id} criado para reserva ${reservaId}.`);
 
@@ -108,9 +101,9 @@ exports.getAllPagamentosAdmin = async (req, res, next) => {
   console.log('GETALLPAGAMENTOSADMIN: Admin buscando todos os pagamentos...');
   try {
     const pagamentos = await Pagamento.find()
-      .populate('cliente_id', 'name email') // Popula nome e email do cliente
-      .populate('reserva_id', 'protocolo data_reserva status') // Popula alguns dados da reserva
-      .sort({ createdAt: -1 }); // Ordena pelos mais recentes
+      .populate('cliente_id', 'name email')
+      .populate('reserva_id', 'protocolo data_reserva status')
+      .sort({ createdAt: -1 });
 
     console.log('GETALLPAGAMENTOSADMIN: Total de pagamentos encontrados:', pagamentos.length);
     res.status(200).json({
@@ -130,16 +123,13 @@ exports.getAllPagamentosAdmin = async (req, res, next) => {
   }
 };
 
-// @desc    (Admin) Obter detalhes de um pagamento específico pelo ID
-// @route   GET /api/pagamentos/admin/:id
-// @access  Private/Admin
 exports.getPagamentoByIdAdmin = async (req, res, next) => {
   const pagamentoId = req.params.id;
   console.log(`GETPAGAMENTOBYIDADMIN: Admin buscando pagamento com ID: ${pagamentoId}`);
   try {
     const pagamento = await Pagamento.findById(pagamentoId)
       .populate('cliente_id', 'name email')
-      .populate('reserva_id', 'protocolo data_reserva status sala_id'); // Popula mais dados da reserva, incluindo sala_id
+      .populate('reserva_id', 'protocolo data_reserva status sala_id');
 
     if (!pagamento) {
       console.log(`GETPAGAMENTOBYIDADMIN: Pagamento com ID ${pagamentoId} não encontrado.`);
@@ -149,9 +139,6 @@ exports.getPagamentoByIdAdmin = async (req, res, next) => {
       });
     }
 
-    // Se quiser popular também os detalhes da sala da reserva:
-    // await Pagamento.populate(pagamento, { path: 'reserva_id.sala_id', select: 'nome capacidade' });
-    // Ou fazer um populate aninhado diretamente: .populate({ path: 'reserva_id', populate: { path: 'sala_id', select: 'nome' }})
 
     console.log(`GETPAGAMENTOBYIDADMIN: Pagamento ${pagamento._id} encontrado.`);
     res.status(200).json({
@@ -178,8 +165,7 @@ exports.getPagamentoByIdAdmin = async (req, res, next) => {
 
 exports.updatePagamentoStatusAdmin = async (req, res, next) => {
   const pagamentoId = req.params.id;
-  const { status: newStatus } = req.body; // Pega o novo status do corpo da requisição
-
+  const { status: newStatus } = req.body; 
   console.log(`UPDATEPAGAMENTOSTATUSADMIN: Admin tentando atualizar status do pagamento ${pagamentoId} para "${newStatus}"`);
 
   try {
@@ -201,11 +187,10 @@ exports.updatePagamentoStatusAdmin = async (req, res, next) => {
     console.log(`UPDATEPAGAMENTOSTATUSADMIN: Status "${newStatus}" validado. Tentando encontrar e atualizar o pagamento...`);
 
     // 3. Encontrar e atualizar o pagamento
-    //    Popula os dados referenciados para retornar o pagamento completo e atualizado.
     const pagamentoAtualizado = await Pagamento.findByIdAndUpdate(
       pagamentoId,
-      { status: newStatus }, // Apenas o campo status é atualizado
-      { new: true, runValidators: true } // new:true retorna o doc atualizado, runValidators para o enum
+      { status: newStatus }, 
+      { new: true, runValidators: true }
     )
     .populate('cliente_id', 'name email')
     .populate('reserva_id', 'protocolo data_reserva status');
@@ -230,8 +215,6 @@ exports.updatePagamentoStatusAdmin = async (req, res, next) => {
     if (error.name === 'CastError' && error.kind === 'ObjectId') {
         return res.status(400).json({ status: 'fail', message: 'ID de pagamento inválido.'});
     }
-    // O erro de ValidationError já é tratado pela checagem do enum acima para o status.
-    // Outros ValidationErrors (se houver) seriam pegos aqui.
     if (error.name === 'ValidationError') {
         const messages = Object.values(error.errors).map(val => val.message);
         return res.status(400).json({

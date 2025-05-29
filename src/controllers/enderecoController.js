@@ -1,12 +1,8 @@
-// src/controllers/enderecoController.js
 const Endereco = require('../models/enderecoModel');
-const User = require('../models/usuarioModel'); // Precisamos do User model para atualizar o endereco_id do usuário
+const User = require('../models/usuarioModel'); 
 
-// @desc    Cliente cria ou atualiza seu próprio endereço
-// @route   PUT /api/enderecos/me
-// @access  Private (usuário logado)
 exports.upsertMyEndereco = async (req, res, next) => {
-  const clienteId = req.user.id; // Obtido do middleware 'protect'
+  const clienteId = req.user.id; 
   console.log(`UPSERTMYENDERECO: Usuário ${clienteId} tentando criar/atualizar endereço.`);
   console.log('Dados recebidos:', req.body);
 
@@ -24,39 +20,34 @@ exports.upsertMyEndereco = async (req, res, next) => {
     const enderecoData = {
       rua,
       numero,
-      complemento, // Será undefined se não enviado, o que é ok (não é obrigatório no model)
+      complemento, 
       bairro,
       cidade,
       estado,
       cep,
       pais,
-      usuario_id: clienteId, // Sempre associar/confirmar o ID do usuário ao endereço
+      usuario_id: clienteId,
     };
 
-    // Buscar o usuário para verificar se ele já tem um endereco_id
     const user = await User.findById(clienteId);
-   // console.log(`UPSERTMYENDERECO: Novo endereço criado e ID ${endereco._id} salvo no usuário.`);
     if (!user) {
-      // Isso não deveria acontecer se o middleware protect funcionou
       return res.status(404).json({ status: 'fail', message: 'Usuário não encontrado.' });
     }
 
     let endereco;
     if (user.endereco_id) {
-      // Usuário já tem um endereço, então vamos atualizá-lo
+
       console.log(`UPSERTMYENDERECO: Usuário já tem endereço_id ${user.endereco_id}. Atualizando...`);
       endereco = await Endereco.findByIdAndUpdate(user.endereco_id, enderecoData, {
-        new: true,          // Retorna o documento modificado
-        runValidators: true,  // Roda as validações do schema
+        new: true, 
+        runValidators: true, 
       });
 
       if (!endereco) {
-        // Caso raro: user.endereco_id existe mas o documento de endereço foi deletado por fora.
-        // Vamos tratar como se fosse criar um novo.
         console.log(`UPSERTMYENDERECO: Endereço com ID ${user.endereco_id} não encontrado para atualização. Criando um novo.`);
         endereco = await Endereco.create(enderecoData);
         user.endereco_id = endereco._id;
-        await user.save({ validateBeforeSave: false }); // Salva o usuário apenas com o novo endereco_id
+        await user.save({ validateBeforeSave: false })
       }
     } else {
       // Usuário não tem um endereço_id, então vamos criar um novo endereço
@@ -68,7 +59,7 @@ exports.upsertMyEndereco = async (req, res, next) => {
       console.log(`UPSERTMYENDERECO: Novo endereço criado e ID ${endereco._id} salvo no usuário.`);
     }
 
-    res.status(200).json({ // 200 OK para update, 201 para create (mas PUT pode ser 200 para ambos)
+    res.status(200).json({ 
       status: 'success',
       data: {
         endereco,
@@ -99,9 +90,6 @@ exports.upsertMyEndereco = async (req, res, next) => {
   }
 };
 
-// @desc    Cliente obtém seu próprio endereço
-// @route   GET /api/enderecos/me
-// @access  Private (usuário logado)
 exports.getMyEndereco = async (req, res, next) => {
   // req.user é populado pelo middleware 'protect'
   const usuarioLogado = req.user;
@@ -110,7 +98,6 @@ exports.getMyEndereco = async (req, res, next) => {
   console.log('GETMYENDERECO: Objeto req.user completo:', JSON.stringify(usuarioLogado, null, 2)); // Log completo do req.user
 
   if (!usuarioLogado) {
-    // Isso não deveria acontecer se o middleware 'protect' funcionou
     console.error('GETMYENDERECO: ERRO CRÍTICO - req.user não está definido após middleware protect.');
     return res.status(500).json({ status: 'error', message: 'Erro interno ao identificar usuário.' });
   }
@@ -139,16 +126,15 @@ exports.getMyEndereco = async (req, res, next) => {
       });
     }
 
-    // Se o endereço foi encontrado, enviamos a resposta de sucesso!
     console.log('GETMYENDERECO: Endereço encontrado:', JSON.stringify(endereco, null, 2));
-    res.status(200).json({ // <<< ESTA PARTE ESTAVA FALTANDO NO SEU CÓDIGO ANTERIOR
+    res.status(200).json({
       status: 'success',
       data: {
         endereco,
       },
-    });                                 // <<< FIM DA PARTE FALTANTE
+    });
 
-  } catch (error) {                   // <<< BLOCO CATCH TAMBÉM PRECISA ESTAR COMPLETO
+  } catch (error) {                   
     console.error("ERRO DETALHADO EM GETMYENDERECO:", error);
     if (error.name === 'CastError' && error.kind === 'ObjectId' && error.path === '_id') {
       console.error(`GETMYENDERECO: O endereco_id "${enderecoIdDoUsuario}" parece ser um ObjectId inválido.`);
@@ -163,7 +149,7 @@ exports.getMyEndereco = async (req, res, next) => {
 };
 
 exports.deleteMyEndereco = async (req, res, next) => {
-  const usuarioLogado = req.user; // Obtido do middleware 'protect'
+  const usuarioLogado = req.user; 
   console.log(`DELETEMYENDERECO: Usuário ${usuarioLogado._id} tentando deletar seu endereço.`);
 
   try {
@@ -181,27 +167,19 @@ exports.deleteMyEndereco = async (req, res, next) => {
     const enderecoDeletado = await Endereco.findByIdAndDelete(enderecoIdParaDeletar);
 
     if (!enderecoDeletado) {
-      // Isso pode acontecer se o endereco_id no usuário for uma referência "quebrada"
       console.warn(`DELETEMYENDERECO: Endereço com ID ${enderecoIdParaDeletar} não foi encontrado para deleção, mas tentaremos limpar a referência do usuário.`);
-      // Mesmo que o endereço não seja encontrado, vamos garantir que a referência no usuário seja removida.
     } else {
       console.log(`DELETEMYENDERECO: Endereço ${enderecoIdParaDeletar} deletado da coleção 'enderecos'.`);
     }
 
-    // Remover a referência do endereço do documento do usuário
-    // Usar $unset para remover completamente o campo endereco_id do documento do usuário
     await User.findByIdAndUpdate(usuarioLogado._id, { $unset: { endereco_id: "" } });
     console.log(`DELETEMYENDERECO: Referência endereco_id removida do perfil do usuário ${usuarioLogado._id}.`);
 
-    // Para operações DELETE bem-sucedidas, é comum retornar um status 204 No Content, sem corpo na resposta.
-    // Ou você pode retornar um 200 OK com uma mensagem de sucesso.
     res.status(200).json({
         status: 'success',
         message: 'Endereço deletado com sucesso.',
         data: null
     });
-    // Alternativa para 204:
-    // res.status(204).send();
 
   } catch (error) {
     console.error("ERRO EM DELETEMYENDERECO:", error);
