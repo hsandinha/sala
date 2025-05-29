@@ -3,7 +3,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 
-const userSchema = new mongoose.Schema(
+const usuarioSchema = new mongoose.Schema(
   {
     nome: {
       type: String,
@@ -48,7 +48,7 @@ const userSchema = new mongoose.Schema(
 );
 
 // Middleware (hook) do Mongoose: Executa ANTES de salvar o documento ('save')
-userSchema.pre('save', async function (next) {
+usuarioSchema.pre('save', async function (next) {
   // Só executa esta função se a senha foi modificada (ou é nova)
   if (!this.isModified('password')) return next();
 
@@ -59,34 +59,36 @@ userSchema.pre('save', async function (next) {
   next();
 });
 
+// Middleware (hook) do Mongoose: Executa ANTES de salvar o documento ('save')
+usuarioSchema.pre('save', async function (next) {
+  // Só executa esta função se a senha foi modificada (ou é nova)
+  if (!this.isModified('senha')) return next(); // ATUALIZADO para 'senha'
+
+  // Gera o "salt" e cria o hash da senha
+  const salt = await bcrypt.genSalt(10);
+  this.senha = await bcrypt.hash(this.senha, salt); // ATUALIZADO para 'this.senha'
+
+  next();
+});
+
 // Método de instância para comparar a senha candidata com a senha no banco
-userSchema.methods.comparePassword = async function (
-  candidatePassword,
-  userPassword // userPassword é o hash que está no banco
-) {
-  return await bcrypt.compare(candidatePassword, userPassword);
+// O nome do método pode continuar 'comparePassword' ou mudar para 'compararSenha'
+usuarioSchema.methods.comparePassword = async function (candidatePassword) {
+  // 'this.senha' aqui se refere ao campo 'senha' (hasheado) do documento atual
+  return await bcrypt.compare(candidatePassword, this.senha);
 };
 
-userSchema.methods.createPasswordResetToken = function () {
-  // 1. Gerar o token original (que seria enviado ao usuário)
+usuarioSchema.methods.createPasswordResetToken = function () {
   const resetToken = crypto.randomBytes(32).toString('hex');
-
-  // 2. Hashear o token e salvar no documento do usuário
-  // Este token hasheado é o que compararemos com o token que o usuário enviar
   this.passwordResetToken = crypto
     .createHash('sha256')
     .update(resetToken)
     .digest('hex');
-
-  // 3. Definir o tempo de expiração do token (ex: 10 minutos a partir de agora)
-  this.passwordResetExpires = Date.now() + 10 * 60 * 1000; // 10 minutos em milissegundos
-
-  console.log({ resetTokenOriginal: resetToken, passwordResetTokenHasheado: this.passwordResetToken }); // Para depuração
-
-  // Retorna o token original (não hasheado), pois é este que o usuário usará
+  this.passwordResetExpires = Date.now() + 10 * 60 * 1000; // 10 minutos
   return resetToken;
 };
 
-const User = mongoose.model('User', userSchema);
+// Definindo o model como 'Usuario' e especificando a coleção como 'usuarios'
+const Usuario = mongoose.model('Usuario', usuarioSchema, 'usuarios');
 
-module.exports = User;
+module.exports = Usuario;
