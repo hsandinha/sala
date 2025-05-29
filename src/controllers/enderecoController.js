@@ -76,7 +76,7 @@ exports.upsertMyEndereco = async (req, res, next) => {
       });
     }
     // Erro de chave duplicada (ex: se usuario_id em Endereco for unique e tentar criar de novo)
-    if (error.code === 11000 && error.keyValue && error.keyValue.usuario_id) {
+    if (error.code === 11000 && error.keyValue && error.keyValue.user_id) {
         return res.status(400).json({
             status: 'fail',
             message: 'Erro de integridade: este usuário já parece ter um endereço associado de outra forma.'
@@ -252,6 +252,130 @@ exports.getEnderecoByIdAdmin = async (req, res, next) => {
     res.status(500).json({
       status: 'error',
       message: 'Erro ao buscar detalhes do endereço.',
+      errorDetails: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+exports.updateEnderecoAdmin = async (req, res, next) => {
+  const enderecoId = req.params.id; // ID do Endereço a ser atualizado
+  console.log(`UPDATEENDERECOADMIN: Admin tentando atualizar endereço com ID: ${enderecoId}`);
+  console.log('Dados recebidos para atualização:', req.body);
+
+  try {
+    const { rua, numero, complemento, bairro, cidade, estado, cep, pais } = req.body;
+    const updateData = {};
+
+    // Construir o objeto de atualização apenas com os campos fornecidos
+    if (rua !== undefined) updateData.rua = rua;
+    if (numero !== undefined) updateData.numero = numero;
+    if (complemento !== undefined) updateData.complemento = complemento;
+    if (bairro !== undefined) updateData.bairro = bairro;
+    if (cidade !== undefined) updateData.cidade = cidade;
+    if (estado !== undefined) updateData.estado = estado;
+    if (cep !== undefined) updateData.cep = cep;
+    if (pais !== undefined) updateData.pais = pais;
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'Nenhum dado fornecido para atualização.',
+      });
+    }
+
+    const enderecoAtualizado = await Endereco.findByIdAndUpdate(
+      enderecoId,
+      updateData,
+      { new: true, runValidators: true } // Retorna o doc atualizado e roda validadores
+    ).populate('usuario_id', 'nome email tipo_usuario');
+
+    if (!enderecoAtualizado) {
+      console.log(`UPDATEENDERECOADMIN: Endereço com ID ${enderecoId} não encontrado para atualização.`);
+      return res.status(404).json({
+        status: 'fail',
+        message: 'Endereço não encontrado com este ID.',
+      });
+    }
+
+    console.log(`UPDATEENDERECOADMIN: Endereço ${enderecoAtualizado._id} atualizado com sucesso.`);
+    res.status(200).json({
+      status: 'success',
+      data: {
+        endereco: enderecoAtualizado,
+      },
+    });
+
+  } catch (error) {
+    console.error("ERRO EM UPDATEENDERECOADMIN:", error);
+    if (error.nome === 'ValidationError') {
+      const messages = Object.values(error.errors).map(val => val.message);
+      return res.status(400).json({
+        status: 'fail',
+        message: messages.join(' '),
+      });
+    }
+    if (error.nome === 'CastError' && error.kind === 'ObjectId') {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'ID de endereço inválido.',
+      });
+    }
+    res.status(500).json({
+      status: 'error',
+      message: 'Erro ao atualizar o endereço.',
+      errorDetails: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
+
+exports.deleteEnderecoAdmin = async (req, res, next) => {
+  const enderecoId = req.params.id; // ID do Endereço a ser deletado
+  console.log(`DELETEENDERECOADMIN: Admin tentando deletar endereço com ID: ${enderecoId}`);
+
+  try {
+    // 1. Encontrar o endereço para verificar se existe e pegar o usuario_id vinculado
+    const enderecoParaDeletar = await Endereco.findById(enderecoId);
+
+    if (!enderecoParaDeletar) {
+      console.log(`DELETEENDERECOADMIN: Endereço com ID ${enderecoId} não encontrado.`);
+      return res.status(404).json({
+        status: 'fail',
+        message: 'Endereço não encontrado com este ID.',
+      });
+    }
+
+    const usuarioVinculadoId = enderecoParaDeletar.usuario_id;
+
+    // 2. Deletar o documento de endereço
+    await Endereco.findByIdAndDelete(enderecoId);
+    console.log(`DELETEENDERECOADMIN: Endereço ${enderecoId} deletado da coleção 'enderecos'.`);
+
+    // 3. Se havia um usuário vinculado, remover a referência endereco_id dele
+    if (usuarioVinculadoId) {
+      console.log(`DELETEENDERECOADMIN: Tentando desvincular endereço do usuário ID: ${usuarioVinculadoId}`);
+      await User.findByIdAndUpdate(usuarioVinculadoId, {
+        $unset: { endereco_id: "" } // Remove o campo endereco_id do documento do usuário
+      });
+      console.log(`DELETEENDERECOADMIN: Referência endereco_id removida do usuário ${usuarioVinculadoId}.`);
+    }
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Endereço deletado com sucesso e desvinculado do usuário, se aplicável.',
+      data: null,
+    });
+
+  } catch (error) {
+    console.error("ERRO EM DELETEENDERECOADMIN:", error);
+    if (error.nome === 'CastError' && error.kind === 'ObjectId') {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'ID de endereço inválido.',
+      });
+    }
+    res.status(500).json({
+      status: 'error',
+      message: 'Erro ao deletar o endereço.',
       errorDetails: process.env.NODE_ENV === 'development' ? error.message : undefined,
     });
   }

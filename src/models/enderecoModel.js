@@ -1,4 +1,3 @@
-// src/models/enderecoModel.js
 const mongoose = require('mongoose');
 
 const enderecoSchema = new mongoose.Schema(
@@ -49,20 +48,16 @@ const enderecoSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
-    // Ligação com o usuário.
-    // O usuário terá um campo 'endereco_id' referenciando este documento.
-    // Adicionar 'usuario_id' aqui é bom para integridade e queries diretas em endereços.
+
     usuario_id: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Usuario',
       required: true,
-      unique: true, // Garante que um endereço pertence a apenas um usuário
-                     // e que um usuário (via este campo) tenha apenas um endereço principal aqui.
-                     // Se um usuário pudesse ter múltiplos endereços, removeríamos 'unique'.
+      unique: true,
     },
   },
   {
-    timestamps: true, // Adiciona createdAt e updatedAt
+    timestamps: true,
   }
 );
 

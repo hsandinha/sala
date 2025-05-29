@@ -1,5 +1,19 @@
 const mongoose = require('mongoose');
 
+const diaHorarioSchema = new mongoose.Schema({
+  aberto: { type: Boolean, default: true }, // Sala está aberta neste dia?
+  inicio: { type: String, match: [/^([01]\d|2[0-3]):([0-5]\d)$/, 'Formato HH:MM'] }, // ex: "08:00"
+  fim: { type: String, match: [/^([01]\d|2[0-3]):([0-5]\d)$/, 'Formato HH:MM'] }     // ex: "18:00"
+}, { _id: false });
+
+const periodoIndisponivelSchema = new mongoose.Schema({
+  startDateTime: { type: Date, required: true },
+  endDateTime: { type: Date, required: true },
+  motivo: { type: String, required: true, trim: true },
+
+}, { _id: true }); 
+
+
 const salaSchema = new mongoose.Schema(
   {
     nome: {
@@ -32,8 +46,31 @@ const salaSchema = new mongoose.Schema(
       },
       default: 'disponivel',
     },
-    // apos entrega implementar fotos, recursos da sala( como projetor, wifi), preço por hora
+        precoPorHora: {
+      type: Number,
+      required: [true, 'O preço por hora da sala é obrigatório.'],
+      min: [0, 'O preço por hora não pode ser negativo.']
+    },
+    horarioFuncionamento: { // Horários padrão da sala
+      segunda: diaHorarioSchema,
+      terca: diaHorarioSchema,
+      quarta: diaHorarioSchema,
+      quinta: diaHorarioSchema,
+      sexta: diaHorarioSchema,
+      sabado: diaHorarioSchema,
+      domingo: diaHorarioSchema,
+    },
+    periodosIndisponiveis: [periodoIndisponivelSchema],
+    fotos: {
+      type: [String], // Um array de URLs para as imagens da sala
+      default: [],
+    },
+    comodidades: { // Recursos/Amenidades da sala
+      type: [String], // Um array de strings, ex: ["Projetor", "Wi-Fi", "Quadro Branco", "Ar Condicionado"]
+      default: [],
+    }
   },
+  
   {
     timestamps: true,
     toJSON: { virtuals: true }, 

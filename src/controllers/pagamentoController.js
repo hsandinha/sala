@@ -3,91 +3,75 @@ const Reserva = require('../models/reservaModel');
 const User = require('../models/userModel');
 
 exports.createPagamentoParaReserva = async (req, res, next) => {
-  const { reservaId } = req.params; // ID da reserva vindo da URL
-  const clienteId = req.user.id;    
-  const { valor, metodo_pagamento, id_transacao_gateway, gateway_response } = req.body; 
+  const { reservaId } = req.params;
+  const clienteId = req.user.id;
+  // NÃO PEGAMOS MAIS 'valor' do req.body. Apenas metodo_pagamento e detalhes do gateway.
+  const { metodo_pagamento, id_transacao_gateway, gateway_response } = req.body;
 
   console.log(`CREATEPAGAMENTOPARARESERVA: Usuário ${clienteId} tentando pagar reserva ${reservaId}`);
-  console.log('Dados do pagamento recebidos:', req.body);
+  console.log('Dados do pagamento (parcial) recebidos:', req.body);
 
   try {
-    // 1. Buscar a reserva
     const reserva = await Reserva.findById(reservaId);
 
-    // 2. Verificar se a reserva existe
     if (!reserva) {
-      return res.status(404).json({
-        status: 'fail',
-        message: 'Reserva não encontrada com o ID fornecido.',
-      });
+      return res.status(404).json({ status: 'fail', message: 'Reserva não encontrada.' });
     }
-
-    // 3. Verificar se a reserva pertence ao usuário logado
     if (reserva.cliente_id.toString() !== clienteId) {
-      return res.status(403).json({ // Forbidden
-        status: 'fail',
-        message: 'Você não tem permissão para pagar por esta reserva.',
-      });
+      return res.status(403).json({ status: 'fail', message: 'Você não tem permissão para pagar por esta reserva.' });
     }
-
-    // 4. Verificar o status da reserva (só pode pagar se estiver, por exemplo, 'pendente_pagamento')
     if (reserva.status !== 'pendente_pagamento') {
+      // ... (lógica de status da reserva existente)
       let message = `Esta reserva não pode ser paga. Status atual: ${reserva.status}.`;
-      if (reserva.status === 'confirmada') {
-        message = 'Esta reserva já foi confirmada/paga.';
-      } else if (reserva.status === 'cancelada_pelo_usuario' || reserva.status === 'cancelada_pelo_admin') {
-        message = 'Esta reserva está cancelada e não pode ser paga.';
-      }
-      return res.status(400).json({
-        status: 'fail',
-        message: message,
-      });
+      if (reserva.status === 'confirmada') message = 'Esta reserva já foi confirmada/paga.';
+      else if (['cancelada_pelo_usuario', 'cancelada_pelo_admin'].includes(reserva.status)) message = 'Esta reserva está cancelada e não pode ser paga.';
+      return res.status(400).json({ status: 'fail', message });
     }
 
-    // 5. Validar dados do pagamento (valor e metodo_pagamento são obrigatórios no model)
-    if (!valor || !metodo_pagamento) {
-        return res.status(400).json({
-            status: 'fail',
-            message: 'Valor e método de pagamento são obrigatórios.'
-        });
+    // Validar se metodo_pagamento foi fornecido
+    if (!metodo_pagamento) {
+        return res.status(400).json({ status: 'fail', message: 'Método de pagamento é obrigatório.' });
     }
 
-    // 6. Criar o documento de Pagamento
+    // Usar o valor total calculado e salvo na reserva
+    const valorAPagar = reserva.total_valor;
+    if (typeof valorAPagar !== 'number' || valorAPagar <= 0) {
+        // Isso indica um problema na criação da reserva ou na configuração de preço da sala
+        console.error(`CREATEPAGAMENTOPARARESERVA: Reserva ${reservaId} com total_valor inválido: ${valorAPagar}`);
+        return res.status(500).json({ status: 'error', message: 'Erro no valor da reserva. Contate o suporte.' });
+    }
+
     const novoPagamento = await Pagamento.create({
       reserva_id: reservaId,
       cliente_id: clienteId,
-      valor, 
-      metodo_pagamento, 
-      status: 'pago', 
+      valor: valorAPagar,
+      metodo_pagamento,
+      status: 'pago',
       id_transacao_gateway: id_transacao_gateway || `sim_${Date.now()}`,
-      gateway_response: gateway_response || { simulation: 'success', timestamp: new Date() }, 
+      gateway_response: gateway_response || { simulation: 'success', timestamp: new Date() },
     });
     console.log(`CREATEPAGAMENTOPARARESERVA: Pagamento ${novoPagamento._id} criado para reserva ${reservaId}.`);
 
-    // Atualiza a reserva: vincular o pagamento_id e mudar status para 'confirmada'
     reserva.pagamento_id = novoPagamento._id;
     reserva.status = 'confirmada';
-    await reserva.save();
+    await reserva.save({validateBeforeSave: false});
     console.log(`CREATEPAGAMENTOPARARESERVA: Reserva ${reservaId} atualizada com pagamento_id e status 'confirmada'.`);
 
-    // 8. Enviar resposta de sucesso
-    res.status(201).json({ 
+    res.status(201).json({
       status: 'success',
       message: 'Pagamento registrado e reserva confirmada com sucesso.',
       data: {
         pagamento: novoPagamento,
-        reserva: reserva, 
+        reserva: reserva,
       },
     });
 
   } catch (error) {
+    // ... (tratamento de erro existente)
     console.error("ERRO EM CREATEPAGAMENTOPARARESERVA:", error);
     if (error.nome === 'ValidationError') {
       const messages = Object.values(error.errors).map(val => val.message);
-      return res.status(400).json({
-        status: 'fail',
-        message: messages.join(' '),
-      });
+      return res.status(400).json({ status: 'fail', message: messages.join(' ') });
     }
     res.status(500).json({
       status: 'error',

@@ -1,13 +1,27 @@
 const Reserva = require('../models/reservaModel');
 const Sala = require('../models/salaModel');
 
+// Helper para converter HH:MM para minutos totais desde o início do dia
+const timeToMinutes = (timeStr) => {
+  if (!timeStr || !timeStr.match(/^([01]\d|2[0-3]):([0-5]\d)$/)) return null;
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  return hours * 60 + minutes;
+};
+
+// Helper para obter o dia da semana (0=Domingo, 1=Segunda, ..., 6=Sábado) de forma consistente em UTC
+const getUTCDayOfWeek = (date) => {
+    // JavaScript getUTCDay() retorna 0 para Domingo, 1 para Segunda, etc.
+    // Vamos mapear para: 0=Domingo, 1=Segunda, ... , 6=Sábado (já é o padrão do JS)
+    return date.getUTCDay();
+};
+const diasDaSemana = ['domingo', 'segunda', 'terca', 'quarta', 'quinta', 'sexta', 'sabado'];
+
 exports.createReserva = async (req, res, next) => {
-  console.log('CREATERESERVA CONTROLLER: Tentando criar nova reserva...');
+  console.log('CREATERESERVA CONTROLLER: Tentando criar nova reserva com lógica avançada...');
   try {
     const { sala_id, data_reserva, hora_inicio, hora_fim } = req.body;
     const cliente_id = req.user.id;
 
-    // 1. Valida entradas básicas
     if (!sala_id || !data_reserva || !hora_inicio || !hora_fim) {
       return res.status(400).json({
         status: 'fail',
@@ -15,26 +29,31 @@ exports.createReserva = async (req, res, next) => {
       });
     }
 
-    // 2. Verifica se a sala existe
-    const salaExistente = await Sala.findById(sala_id);
-    if (!salaExistente) {
+    const sala = await Sala.findById(sala_id);
+    if (!sala) {
       return res.status(404).json({
         status: 'fail',
         message: 'Sala não encontrada com o ID fornecido.',
       });
     }
-    // Adicionar a verificacao se salaExistente.status é 'disponivel'
 
-    const [startHours, startMinutes] = hora_inicio.split(':').map(Number);
-    const [endHours, endMinutes] = hora_fim.split(':').map(Number);
+    if (sala.status !== 'disponivel') {
+        return res.status(400).json({
+            status: 'fail',
+            message: `A sala '${sala.nome}' não está disponível para reserva (status atual: ${sala.status}).`
+        });
+    }
 
-
-    let parsedDataReserva = new Date(data_reserva);
+    // --- Construção e Validação de Datas/Horas da Requisição ---
+    let parsedDataReserva = new Date(data_reserva); // Ex: "2025-12-20" -> Date object
     if (isNaN(parsedDataReserva.getTime())) {
         return res.status(400).json({ status: 'fail', message: 'Formato de data_reserva inválido.' });
     }
+    // Normalizar para meia-noite UTC para evitar problemas de fuso horário ao adicionar horas/minutos
     parsedDataReserva = new Date(Date.UTC(parsedDataReserva.getUTCFullYear(), parsedDataReserva.getUTCMonth(), parsedDataReserva.getUTCDate()));
 
+    const [startHours, startMinutes] = hora_inicio.split(':').map(Number);
+    const [endHours, endMinutes] = hora_fim.split(':').map(Number);
 
     const requestStartDateTime = new Date(parsedDataReserva);
     requestStartDateTime.setUTCHours(startHours, startMinutes, 0, 0);
@@ -42,40 +61,115 @@ exports.createReserva = async (req, res, next) => {
     const requestEndDateTime = new Date(parsedDataReserva);
     requestEndDateTime.setUTCHours(endHours, endMinutes, 0, 0);
 
-    // Validação simples de horário
     if (requestEndDateTime <= requestStartDateTime) {
       return res.status(400).json({
         status: 'fail',
-        message: 'A hora de fim deve ser posterior à hora de início.',
+        message: 'A hora de fim deve ser posterior à hora de início no mesmo dia.',
       });
     }
+    
+    // Verificar se a data da reserva não é no passado
+    const hojeMeiaNoiteUTC = new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth(), new Date().getUTCDate()));
+    if (parsedDataReserva < hojeMeiaNoiteUTC) {
+        return res.status(400).json({
+            status: 'fail',
+            message: 'Não é possível fazer reservas para datas passadas.'
+        });
+    }
 
-    // 4. Verificar disponibilidade da sala (CHECAGEM DE CONFLITO)
+    // --- 1. VERIFICAR HORÁRIO DE FUNCIONAMENTO DA SALA ---
+    if (sala.horarioFuncionamento) {
+      const diaDaSemanaISO = getUTCDayOfWeek(requestStartDateTime); // 0 (Dom) - 6 (Sab)
+      const nomeDiaSemana = diasDaSemana[diaDaSemanaISO];
+      const horarioDia = sala.horarioFuncionamento[nomeDiaSemana];
+
+      console.log(`Dia da reserva: ${nomeDiaSemana}, Horário de funcionamento do dia:`, horarioDia);
+
+      if (!horarioDia || !horarioDia.aberto) {
+        return res.status(400).json({
+          status: 'fail',
+          message: `A sala não está aberta para reservas neste dia da semana (${nomeDiaSemana}).`,
+        });
+      }
+
+      const salaAbreMinutos = timeToMinutes(horarioDia.inicio);
+      const salaFechaMinutos = timeToMinutes(horarioDia.fim);
+      const reservaInicioMinutos = timeToMinutes(hora_inicio);
+      const reservaFimMinutos = timeToMinutes(hora_fim);
+
+      if (salaAbreMinutos === null || salaFechaMinutos === null || reservaInicioMinutos === null || reservaFimMinutos === null) {
+          return res.status(500).json({ status: 'fail', message: 'Erro ao processar horários de funcionamento da sala.' });
+      }
+
+      if (reservaInicioMinutos < salaAbreMinutos || reservaFimMinutos > salaFechaMinutos) {
+        return res.status(400).json({
+          status: 'fail',
+          message: `O horário solicitado (${hora_inicio} - ${hora_fim}) está fora do horário de funcionamento da sala para ${nomeDiaSemana} (${horarioDia.inicio} - ${horarioDia.fim}).`,
+        });
+      }
+    } else {
+        console.warn(`Sala ${sala.nome} não possui horário de funcionamento definido. Pulando esta checagem.`);
+    }
+
+    // --- 2. VERIFICAR PERÍODOS INDISPONÍVEIS (MANUTENÇÃO/BLOQUEIOS) ---
+    if (sala.periodosIndisponiveis && sala.periodosIndisponiveis.length > 0) {
+      for (const periodo of sala.periodosIndisponiveis) {
+        // Checar sobreposição: (StartA < EndB) and (EndA > StartB)
+        if (requestStartDateTime < periodo.endDateTime && requestEndDateTime > periodo.startDateTime) {
+          return res.status(409).json({ // 409 Conflict
+            status: 'fail',
+            message: `A sala está indisponível no período solicitado devido a: ${periodo.motivo} (de ${periodo.startDateTime.toISOString()} a ${periodo.endDateTime.toISOString()}).`,
+          });
+        }
+      }
+    }
+
+    // --- 3. VERIFICAR CONFLITOS COM OUTRAS RESERVAS (Lógica já existente) ---
     const conflictingReservation = await Reserva.findOne({
       sala_id: sala_id,
-      status: { $nin: ['cancelada_pelo_usuario', 'cancelada_pelo_admin'] }, // Não considerar canceladas
+      status: { $nin: ['cancelada_pelo_usuario', 'cancelada_pelo_admin'] },
       $or: [
         { startDateTime: { $lt: requestEndDateTime }, endDateTime: { $gt: requestStartDateTime } },
       ],
     });
 
     if (conflictingReservation) {
-      console.log('CREATERESERVA CONTROLLER: Conflito de horário encontrado para a sala.');
       return res.status(409).json({
         status: 'fail',
         message: 'A sala não está disponível no horário solicitado. Já existe uma reserva.',
         conflictingReservationId: conflictingReservation._id
       });
     }
-    console.log('CREATERESERVA CONTROLLER: Sala disponível. Criando reserva...');
+    console.log('CREATERESERVA CONTROLLER: Sala disponível. Calculando preço...');
 
-    // 5. Criar a nova reserva
+    // --- 4. CALCULAR PREÇO ---
+    if (typeof sala.precoPorHora !== 'number' || sala.precoPorHora < 0) {
+        return res.status(500).json({ // Erro de configuração da sala
+            status: 'error',
+            message: 'Erro na configuração de preço da sala. Contate o administrador.'
+        });
+    }
+    const duracaoMs = requestEndDateTime.getTime() - requestStartDateTime.getTime();
+    const duracaoHoras = duracaoMs / (1000 * 60 * 60);
+    // Política de arredondamento: Arredondar para cima para a próxima meia hora ou hora cheia?
+    // Por simplicidade, vamos usar frações de hora. Ou arredondar para cima para o próximo bloco (ex: 1.2h vira 1.5h ou 2h)
+    // Exemplo: arredondar para o próximo múltiplo de 0.5 horas (meia hora)
+    const duracaoHorasArredondada = Math.ceil(duracaoHoras * 2) / 2;
+    const valorTotalCalculado = duracaoHorasArredondada * sala.precoPorHora;
+
+    console.log(`CREATERESERVA CONTROLLER: Duração: ${duracaoHoras}h, Arredondada: ${duracaoHorasArredondada}h, Preço/h: ${sala.precoPorHora}, Total: ${valorTotalCalculado}`);
+
+    // --- 5. CRIAR A NOVA RESERVA ---
     const novaReserva = await Reserva.create({
       cliente_id,
       sala_id,
       data_reserva: parsedDataReserva,
       hora_inicio,
       hora_fim,
+      total_valor: valorTotalCalculado, // Salva o valor calculado
+      // startDateTime e endDateTime serão preenchidos pelo hook pre-save no model
+      // protocolo será gerado pelo hook
+      // status usará o default 'pendente_pagamento'
     });
 
     console.log('CREATERESERVA CONTROLLER: Nova reserva criada com sucesso:', novaReserva.protocolo);
@@ -90,16 +184,10 @@ exports.createReserva = async (req, res, next) => {
     console.error("ERRO EM CREATERESERVA CONTROLLER:", error);
     if (error.nome === 'ValidationError') {
       const messages = Object.values(error.errors).map(val => val.message);
-      return res.status(400).json({
-        status: 'fail',
-        message: messages.join(' '),
-      });
+      return res.status(400).json({ status: 'fail', message: messages.join(' ') });
     }
     if (error.nome === 'CastError' && error.kind === 'ObjectId') {
-        return res.status(400).json({
-            status: 'fail',
-            message: 'ID de sala ou usuário inválido.',
-        });
+        return res.status(400).json({ status: 'fail', message: 'ID de sala inválido.' });
     }
     res.status(500).json({
       status: 'error',

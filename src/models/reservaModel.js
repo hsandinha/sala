@@ -51,6 +51,11 @@ const reservaSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Pagamento',
     },
+    total_valor: {
+      type: Number,
+      required: [true, 'O valor total da reserva é obrigatório.'],
+      min: [0, 'O valor total da reserva não pode ser negativo.']
+    }
   },
   {
     timestamps: true,
