@@ -218,3 +218,41 @@ exports.getAllEnderecosAdmin = async (req, res, next) => {
     });
   }
 };
+
+exports.getEnderecoByIdAdmin = async (req, res, next) => {
+  const enderecoId = req.params.id; // ID do Endereço, não do usuário
+  console.log(`GETENDERECOBYIDADMIN: Admin buscando endereço com ID: ${enderecoId}`);
+  try {
+    const endereco = await Endereco.findById(enderecoId)
+      .populate('usuario_id', 'nome email tipo_usuario'); // Popula dados do usuário vinculado ao endereço
+
+    if (!endereco) {
+      console.log(`GETENDERECOBYIDADMIN: Endereço com ID ${enderecoId} não encontrado.`);
+      return res.status(404).json({
+        status: 'fail',
+        message: 'Endereço não encontrado com este ID.',
+      });
+    }
+
+    console.log(`GETENDERECOBYIDADMIN: Endereço encontrado. Pertence ao usuário: ${endereco.usuario_id ? endereco.usuario_id.email : 'N/A (usuário não populado ou não vinculado)'}`);
+    res.status(200).json({
+      status: 'success',
+      data: {
+        endereco,
+      },
+    });
+  } catch (error) {
+    console.error("ERRO EM GETENDERECOBYIDADMIN:", error);
+    if (error.name === 'CastError' && error.kind === 'ObjectId') {
+      return res.status(400).json({
+        status: 'fail',
+        message: 'ID de endereço inválido.',
+      });
+    }
+    res.status(500).json({
+      status: 'error',
+      message: 'Erro ao buscar detalhes do endereço.',
+      errorDetails: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
