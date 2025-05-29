@@ -1,24 +1,22 @@
-// src/models/reservaModel.js
 const mongoose = require('mongoose');
 
 const reservaSchema = new mongoose.Schema(
   {
-    data_reserva: { // Data que o usuário seleciona
+    data_reserva: { 
       type: Date,
       required: [true, 'A data da reserva é obrigatória.'],
     },
-    hora_inicio: { // Hora que o usuário seleciona (ex: "14:00")
+    hora_inicio: { 
       type: String,
       required: [true, 'A hora de início da reserva é obrigatória.'],
       match: [/^([01]\d|2[0-3]):([0-5]\d)$/, 'Formato de hora inválido. Use HH:MM.'],
     },
-    hora_fim: { // Hora que o usuário seleciona (ex: "16:00")
+    hora_fim: { 
       type: String,
       required: [true, 'A hora de fim da reserva é obrigatória.'],
       match: [/^([01]\d|2[0-3]):([0-5]\d)$/, 'Formato de hora inválido. Use HH:MM.'],
     },
-    // NOVOS CAMPOS PARA ARMAZENAR DATA/HORA COMBINADAS
-    startDateTime: {
+       startDateTime: {
       type: Date,
       // Será populado pelo hook pre-save
     },

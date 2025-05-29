@@ -1,7 +1,6 @@
-// src/routes/authRoutes.js
 const express = require('express');
 const router = express.Router();
-const authController = require('../controllers/authController'); // Vamos criar este arquivo em seguida
+const authController = require('../controllers/authController');
 const { protect } = require('../middlewares/authMiddleware');
 
 

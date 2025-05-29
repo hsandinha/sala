@@ -28,7 +28,7 @@ const protect = async (req, res, next) => {
         });
       }
 
-      next(); // Prossegue para o próximo middleware ou controller da rota
+      next();
     } catch (error) {
       console.error('Erro na autenticação do token:', error);
       return res.status(401).json({
@@ -47,11 +47,11 @@ const protect = async (req, res, next) => {
 };
 
   const restrictToAdmin = (req, res, next) => {
-  // Assumimos que o middleware 'protect' já rodou e populou req.user
+
   if (req.user && req.user.role === 'admin') {
-    next(); // Usuário é admin, pode prosseguir
+    next(); 
   } else {
-    return res.status(403).json({ // 403 Forbidden
+    return res.status(403).json({ 
       status: 'fail',
       message: 'Você não tem permissão para realizar esta ação.',
     });

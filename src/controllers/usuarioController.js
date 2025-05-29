@@ -1,5 +1,4 @@
-
-const User = require('../models/usuarioModel'); // Apenas esta importação é necessária aqui por enquanto
+const User = require('../models/usuarioModel'); 
 
 exports.getMe = async (req, res, next) => {
   try {
@@ -7,7 +6,6 @@ exports.getMe = async (req, res, next) => {
     const user = req.user;
 
     if (!user) {
-      // Este caso não deveria acontecer se o middleware protect funcionou corretamente
       return res.status(404).json({
         status: 'fail',
         message: 'Usuário não encontrado (inesperado após middleware protect).',
@@ -36,12 +34,12 @@ exports.updateMe = async (req, res, next) => {
 
     const userId = req.user.id;
 
-    //    Não permitimos que o usuário atualize 'role', 'email' ou 'password' por esta rota.
+    
     const allowedUpdates = {};
     if (req.body.name) allowedUpdates.name = req.body.name;
     if (req.body.phone) allowedUpdates.phone = req.body.phone;
     if (req.body.cpf_cnpj) allowedUpdates.cpf_cnpj = req.body.cpf_cnpj;
-    // Se você tiver outros campos que o usuário pode atualizar no userModel, adicione-os aqui.
+    
 
     console.log('UPDATEME CONTROLLER: Campos para atualizar:', allowedUpdates);
 
@@ -56,10 +54,10 @@ exports.updateMe = async (req, res, next) => {
     const updatedUser = await User.findByIdAndUpdate(userId, allowedUpdates, {
       new: true,
       runValidators: true,
-    }).select('-password'); // Garantir que a senha não seja retornada
+    }).select('-senha'); 
 
     if (!updatedUser) {
-      // Isso não deveria acontecer se o token é válido e o usuário existe
+      
       console.log('UPDATEME CONTROLLER: Usuário não encontrado para atualização (inesperado).');
       return res.status(404).json({
         status: 'fail',
@@ -96,10 +94,8 @@ exports.updateMe = async (req, res, next) => {
 exports.getAllUsers = async (req, res, next) => {
   console.log('GETALLUSERS CONTROLLER: Buscando todos os usuários...');
   try {
-    // Busca todos os usuários. Em uma aplicação real, você adicionaria paginação aqui.
-    // O '.select('-password')' não é estritamente necessário aqui se já estiver no schema,
-    // mas é uma boa prática para garantir.
-    const users = await User.find().select('-password');
+
+    const users = await User.find().select('-senha');
 
     console.log('GETALLUSERS CONTROLLER: Usuários encontrados:', users.length);
     res.status(200).json({
@@ -122,7 +118,7 @@ exports.getAllUsers = async (req, res, next) => {
 exports.getUserById = async (req, res, next) => {
   console.log(`GETUSERBYID CONTROLLER: Buscando usuário com ID: ${req.params.id}`);
   try {
-    const user = await User.findById(req.params.id).select('-password'); // Exclui a senha da resposta
+    const user = await User.findById(req.params.id).select('-senha'); // Exclui a senha da resposta
 
     if (!user) {
       console.log(`GETUSERBYID CONTROLLER: Usuário com ID ${req.params.id} não encontrado.`);
@@ -191,10 +187,9 @@ exports.updateUserByAdmin = async (req, res, next) => {
     }
 
     const updatedUser = await User.findByIdAndUpdate(userIdToUpdate, updateData, {
-      new: true,          // Retorna o documento modificado
-      runValidators: true,  // Roda as validações do schema
-    }).select('-password'); // Garante que a senha não seja retornada
-
+      new: true,          
+      runValidators: true,  
+    }).select('-senha'); 
     if (!updatedUser) {
       console.log(`UPDATEUSERBYADMIN CONTROLLER: Usuário com ID ${userIdToUpdate} não encontrado para atualização.`);
       return res.status(404).json({

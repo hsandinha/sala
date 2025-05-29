@@ -1,35 +1,29 @@
-// src/controllers/salaController.js
-const Sala = require('../models/salaModel'); // Importa o nosso Sala model
+const Sala = require('../models/salaModel'); 
 
-// @desc    (Admin) Criar uma nova sala
-// @route   POST /api/salas
-// @access  Private/Admin
+
 exports.createSala = async (req, res, next) => {
   console.log('CREATESALA CONTROLLER: Tentando criar nova sala...');
   console.log('Dados recebidos no corpo da requisição:', req.body);
   try {
-    // Os dados da sala virão do corpo da requisição
-    // O model Sala já tem as validações para os campos obrigatórios (nome, descricao, capacidade, status)
     const { nome, descricao, capacidade, categoria_id, status } = req.body;
 
-    // Validação básica (embora o Mongoose também valide)
-    if (!nome || !descricao || !capacidade) {
-      return res.status(400).json({
-        status: 'fail',
-        message: 'Por favor, forneça nome, descrição e capacidade para a sala.',
-      });
+        if (!nome || !descricao || !capacidade) {
+        return res.status(400).json({
+          status: 'fail',
+          message: 'Por favor, forneça nome, descrição e capacidade para a sala.',
+        });
     }
 
     const novaSala = await Sala.create({
       nome,
       descricao,
       capacidade,
-      categoria_id, // Será undefined se não enviado, e o model permite (não é obrigatório por enquanto)
-      status,       // Usará o default 'disponivel' do schema se não enviado e se for válido
+      categoria_id, 
+      status, 
     });
 
     console.log('CREATESALA CONTROLLER: Nova sala criada com sucesso:', novaSala._id);
-    res.status(201).json({ // 201 Created
+    res.status(201).json({
       status: 'success',
       data: {
         sala: novaSala,
@@ -41,10 +35,10 @@ exports.createSala = async (req, res, next) => {
       const messages = Object.values(error.errors).map(val => val.message);
       return res.status(400).json({
         status: 'fail',
-        message: messages.join(' '), // Usar espaço para juntar mensagens de validação
+        message: messages.join(' '), 
       });
     }
-    // Tratar outros erros, como duplicidade se houver campos unique (ex: nome da sala, se definido como unique)
+    
     if (error.code === 11000) {
         return res.status(400).json({
             status: 'fail',
@@ -62,9 +56,7 @@ exports.createSala = async (req, res, next) => {
 exports.getAllSalas = async (req, res, next) => {
   console.log('GETALLSALAS CONTROLLER: Buscando todas as salas...');
   try {
-    // Em uma aplicação real, você adicionaria filtros (query params) e paginação aqui.
-    // Ex: filtrar por status 'disponivel', por capacidade, etc.
-    const salas = await Sala.find(); // Por enquanto, busca todas as salas
+    const salas = await Sala.find(); 
 
     console.log('GETALLSALAS CONTROLLER: Salas encontradas:', salas.length);
     res.status(200).json({
@@ -89,8 +81,6 @@ exports.getSalaById = async (req, res, next) => {
   console.log(`GETSALABYID CONTROLLER: Buscando sala com ID: ${salaId}`);
   try {
     const sala = await Sala.findById(salaId);
-    // Se você tivesse uma coleção 'CategoriaSala' e quisesse popular:
-    // const sala = await Sala.findById(salaId).populate('categoria_id', 'nomeDaCategoria');
 
     if (!sala) {
       console.log(`GETSALABYID CONTROLLER: Sala com ID ${salaId} não encontrada.`);
@@ -123,21 +113,15 @@ exports.getSalaById = async (req, res, next) => {
   }
 };
 
-// @desc    (Admin) Atualizar uma sala existente pelo ID
-// @route   PUT /api/salas/:id
-// @access  Private/Admin
 exports.updateSala = async (req, res, next) => {
   const salaIdToUpdate = req.params.id;
   console.log(`UPDATESALA CONTROLLER: Tentando atualizar sala com ID: ${salaIdToUpdate}`);
   console.log('Dados recebidos para atualização:', req.body);
 
   try {
-    // Os dados para atualização virão do corpo da requisição.
-    // O Mongoose só atualizará os campos presentes em req.body.
-    // As validações do schema serão aplicadas devido ao { runValidators: true }.
     const updatedSala = await Sala.findByIdAndUpdate(salaIdToUpdate, req.body, {
-      new: true,          // Retorna o documento modificado
-      runValidators: true,  // Roda as validações do schema (ex: required, min, enum)
+      new: true,
+      runValidators: true, 
     });
 
     if (!updatedSala) {
@@ -170,7 +154,7 @@ exports.updateSala = async (req, res, next) => {
         message: 'ID de sala inválido.',
       });
     }
-    // Tratar outros erros, como duplicidade se houver campos unique (ex: nome da sala)
+  
     if (error.code === 11000) {
         return res.status(400).json({
             status: 'fail',
@@ -201,15 +185,12 @@ exports.deleteSala = async (req, res, next) => {
     }
 
     console.log(`DELETESALA CONTROLLER: Sala ${sala.nome} deletada com sucesso.`);
-    // Para DELETE bem-sucedido, status 204 (No Content) é comum e não envia corpo.
-    // Ou um 200 com uma mensagem. Vamos usar 200 com mensagem para consistência.
+
     res.status(200).json({
       status: 'success',
       message: 'Sala deletada com sucesso.',
-      data: null, // Ou pode omitir data
+      data: null, 
     });
-    // Alternativa para 204:
-    // res.status(204).send();
 
   } catch (error) {
     console.error("ERRO EM DELETESALA CONTROLLER:", error);

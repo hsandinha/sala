@@ -6,7 +6,7 @@ const pagamentoSchema = new mongoose.Schema(
     data_pagamento: {
       type: Date,
       required: [true, 'A data do pagamento é obrigatória.'],
-      default: Date.now, // Preenche com a data atual por padrão
+      default: Date.now, 
     },
     status: {
       type: String,
@@ -15,12 +15,12 @@ const pagamentoSchema = new mongoose.Schema(
         values: ['pendente', 'pago', 'falhou', 'reembolsado', 'cancelado'],
         message: 'Status de pagamento inválido.',
       },
-      default: 'pendente', // Um pagamento pode começar como pendente
+      default: 'pendente', 
     },
     valor: {
       type: Number,
       required: [true, 'O valor do pagamento é obrigatório.'],
-      min: [0.01, 'O valor do pagamento deve ser positivo.'], // Exemplo de valor mínimo
+      min: [0.01, 'O valor do pagamento deve ser positivo.'], 
     },
     metodo_pagamento: {
       type: String,
@@ -30,18 +30,18 @@ const pagamentoSchema = new mongoose.Schema(
         message: 'Método de pagamento inválido.',
       },
     },
-    id_transacao_gateway: { // ID da transação no provedor de pagamento externo (Stripe, PayPal, etc.)
+    id_transacao_gateway: { 
       type: String,
       trim: true,
     },
     reserva_id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Reserva', // Referencia o model Reserva
+      ref: 'Reserva',
       required: [true, 'A reserva associada ao pagamento é obrigatória.'],
     },
-    cliente_id: { // Para saber quem fez o pagamento
+    cliente_id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',  // Referencia o model User
+      ref: 'Usuario',  
       required: [true, 'O cliente associado ao pagamento é obrigatório.'],
     },
     gateway_response: {
@@ -49,7 +49,7 @@ const pagamentoSchema = new mongoose.Schema(
     }
   },
   {
-    timestamps: true, // Adiciona createdAt e updatedAt
+    timestamps: true,
   }
 );
 
