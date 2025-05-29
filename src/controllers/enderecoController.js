@@ -193,3 +193,28 @@ exports.deleteMyEndereco = async (req, res, next) => {
     });
   }
 };
+
+exports.getAllEnderecosAdmin = async (req, res, next) => {
+  console.log('GETALLENDERECOSADMIN: Admin buscando todos os endereços...');
+  try {
+    const enderecos = await Endereco.find()
+      .populate('usuario_id', 'nome email tipo_usuario')
+      .sort({ createdAt: -1 });
+
+    console.log('GETALLENDERECOSADMIN: Total de endereços encontrados:', enderecos.length);
+    res.status(200).json({
+      status: 'success',
+      results: enderecos.length,
+      data: {
+        enderecos,
+      },
+    });
+  } catch (error) {
+    console.error("ERRO EM GETALLENDERECOSADMIN:", error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Erro ao buscar todos os endereços.',
+      errorDetails: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};

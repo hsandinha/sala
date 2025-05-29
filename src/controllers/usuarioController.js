@@ -158,16 +158,13 @@ exports.updateUserByAdmin = async (req, res, next) => {
   console.log('Dados recebidos para atualização:', req.body);
 
   try {
-    // Campos que um admin pode atualizar.
-    // Excluímos a senha daqui, pois a atualização de senha deve ter um fluxo dedicado e mais seguro.
-    // O admin pode, por exemplo, alterar nome, email, role, phone, cpf_cnpj.
     const { name, email, role, phone, cpf_cnpj } = req.body;
     const updateData = {};
 
     if (name) updateData.name = name;
-    if (email) updateData.email = email; // Cuidado com a unicidade do email se for alterado
+    if (email) updateData.email = email;
     if (role) {
-      if (['user', 'admin'].includes(role)) { // Validar se o role é um dos permitidos
+      if (['user', 'admin'].includes(role)) { 
         updateData.role = role;
       } else {
         return res.status(400).json({
@@ -251,15 +248,12 @@ exports.deleteUserByAdmin = async (req, res, next) => {
     }
 
     console.log(`DELETEUSERBYADMIN CONTROLLER: Usuário ${user.email} deletado com sucesso.`);
-    // Para operações DELETE bem-sucedidas, é comum retornar um status 204 No Content, sem corpo na resposta.
-    // Ou você pode retornar um 200 OK com uma mensagem de sucesso.
     res.status(200).json({
         status: 'success',
         message: 'Usuário deletado com sucesso.',
-        data: null // Ou pode omitir 'data' ou retornar o usuário deletado se preferir
+        data: null 
     });
-    // Alternativa para 204:
-    // res.status(204).send();
+
 
   } catch (error) {
     console.error("ERRO EM DELETEUSERBYADMIN CONTROLLER:", error);
