@@ -1,12 +1,12 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/userModel'); // Precisamos do User model para buscar o usuário
+const User = require('../models/usuarioModel'); 
 
 const protect = async (req, res, next) => {
   let token;
+  
 
   // 1. Verificar se o token existe no cabeçalho Authorization e se começa com "Bearer"
-  if (
-    req.headers.authorization &&
+  if (    req.headers.authorization &&
     req.headers.authorization.startsWith('Bearer')
   ) {
     try {
@@ -46,4 +46,20 @@ const protect = async (req, res, next) => {
   }
 };
 
-module.exports = { protect };
+  const restrictToAdmin = (req, res, next) => {
+  // Assumimos que o middleware 'protect' já rodou e populou req.user
+  if (req.user && req.user.role === 'admin') {
+    next(); // Usuário é admin, pode prosseguir
+  } else {
+    return res.status(403).json({ // 403 Forbidden
+      status: 'fail',
+      message: 'Você não tem permissão para realizar esta ação.',
+    });
+  }
+};
+
+
+module.exports = {
+  protect,
+  restrictToAdmin
+ };
