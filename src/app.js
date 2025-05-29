@@ -34,7 +34,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/auth', authRoutes); 
-app.use('/api/usuario', usuarioRoutes);
+app.use('/api/usuarios', usuarioRoutes);
 app.use('/api/salas', salaRoutes);
 app.use('/api/reservas', reservaRoutes);
 app.use('/api/enderecos', enderecoRoutes); 
