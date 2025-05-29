@@ -88,14 +88,14 @@ exports.createReserva = async (req, res, next) => {
 
   } catch (error) {
     console.error("ERRO EM CREATERESERVA CONTROLLER:", error);
-    if (error.name === 'ValidationError') {
+    if (error.nome === 'ValidationError') {
       const messages = Object.values(error.errors).map(val => val.message);
       return res.status(400).json({
         status: 'fail',
         message: messages.join(' '),
       });
     }
-    if (error.name === 'CastError' && error.kind === 'ObjectId') {
+    if (error.nome === 'CastError' && error.kind === 'ObjectId') {
         return res.status(400).json({
             status: 'fail',
             message: 'ID de sala ou usuário inválido.',
@@ -169,7 +169,7 @@ exports.cancelMyReserva = async (req, res, next) => {
 
   } catch (error) {
     console.error("ERRO EM CANCELMYRESERVA CONTROLLER:", error);
-    if (error.name === 'CastError' && error.kind === 'ObjectId') {
+    if (error.nome === 'CastError' && error.kind === 'ObjectId') {
         return res.status(400).json({ status: 'fail', message: 'ID de reserva inválido.'});
     }
     res.status(500).json({
@@ -184,7 +184,7 @@ exports.getAllReservasAdmin = async (req, res, next) => {
   console.log('GETALLRESERVASADMIN CONTROLLER: Buscando todas as reservas...');
   try {
     const reservas = await Reserva.find()
-      .populate('cliente_id', 'name email')
+      .populate('cliente_id', 'nome email')
       .populate('sala_id', 'nome capacidade status')
       .sort({ createdAt: -1 });
 
@@ -238,7 +238,7 @@ exports.updateReservaStatusAdmin = async (req, res, next) => {
       { status: newStatus },
       { new: true, runValidators: true }
     )
-    .populate('cliente_id', 'name email')
+    .populate('cliente_id', 'nome email')
     .populate('sala_id', 'nome'); 
 
     console.log(' Operação findByIdAndUpdate concluída.'); // LOG 5
@@ -261,7 +261,7 @@ exports.updateReservaStatusAdmin = async (req, res, next) => {
 
   } catch (error) {
     console.error("ERRO DETALHADO EM ", error); // LOG 9
-    if (error.name === 'CastError' && error.kind === 'ObjectId') {
+    if (error.nome === 'CastError' && error.kind === 'ObjectId') {
         return res.status(400).json({ status: 'fail', message: 'ID de reserva inválido.'});
     }
     res.status(500).json({

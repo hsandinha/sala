@@ -1,5 +1,5 @@
 const Endereco = require('../models/enderecoModel');
-const User = require('../models/usuarioModel'); 
+const User = require('../models/userModel'); 
 
 exports.upsertMyEndereco = async (req, res, next) => {
   const clienteId = req.user.id; 
@@ -68,7 +68,7 @@ exports.upsertMyEndereco = async (req, res, next) => {
 
   } catch (error) {
     console.error("ERRO EM UPSERTMYENDERECO:", error);
-    if (error.name === 'ValidationError') {
+    if (error.nome === 'ValidationError') {
       const messages = Object.values(error.errors).map(val => val.message);
       return res.status(400).json({
         status: 'fail',
@@ -136,7 +136,7 @@ exports.getMyEndereco = async (req, res, next) => {
 
   } catch (error) {                   
     console.error("ERRO DETALHADO EM GETMYENDERECO:", error);
-    if (error.name === 'CastError' && error.kind === 'ObjectId' && error.path === '_id') {
+    if (error.nome === 'CastError' && error.kind === 'ObjectId' && error.path === '_id') {
       console.error(`GETMYENDERECO: O endereco_id "${enderecoIdDoUsuario}" parece ser um ObjectId inválido.`);
        return res.status(400).json({ status: 'fail', message: 'Formato de ID de endereço inválido no perfil do usuário.' });
     }
@@ -183,7 +183,7 @@ exports.deleteMyEndereco = async (req, res, next) => {
 
   } catch (error) {
     console.error("ERRO EM DELETEMYENDERECO:", error);
-    if (error.name === 'CastError' && error.kind === 'ObjectId') {
+    if (error.nome === 'CastError' && error.kind === 'ObjectId') {
         return res.status(400).json({ status: 'fail', message: 'ID de endereço no perfil do usuário é inválido.'});
     }
     res.status(500).json({
@@ -198,8 +198,8 @@ exports.getAllEnderecosAdmin = async (req, res, next) => {
   console.log('GETALLENDERECOSADMIN: Admin buscando todos os endereços...');
   try {
     const enderecos = await Endereco.find()
-      .populate('usuario_id', 'nome email tipo_usuario')
-      .sort({ createdAt: -1 });
+      .populate('usuario_id', 'nome email tipo_usuario') // Popula alguns dados do usuário dono do endereço
+      .sort({ createdAt: -1 }); // Ordena pelos mais recentes
 
     console.log('GETALLENDERECOSADMIN: Total de endereços encontrados:', enderecos.length);
     res.status(200).json({
@@ -243,7 +243,7 @@ exports.getEnderecoByIdAdmin = async (req, res, next) => {
     });
   } catch (error) {
     console.error("ERRO EM GETENDERECOBYIDADMIN:", error);
-    if (error.name === 'CastError' && error.kind === 'ObjectId') {
+    if (error.nome === 'CastError' && error.kind === 'ObjectId') {
       return res.status(400).json({
         status: 'fail',
         message: 'ID de endereço inválido.',

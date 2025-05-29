@@ -4,7 +4,7 @@ const cors = require('cors');
 
 // Importar as rotas de autenticação
 const authRoutes = require('./routes/authRoutes');
-const usuarioRoutes = require('./routes/usuarioRoutes');
+const userRoutes = require('./routes/userRoutes');
 const salaRoutes = require('./routes/salaRoutes');
 const reservaRoutes = require('./routes/reservaRoutes');
 const enderecoRoutes = require('./routes/enderecoRoutes'); 
@@ -34,7 +34,7 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api/auth', authRoutes); 
-app.use('/api/usuarios', usuarioRoutes);
+app.use('/api/usuarios', userRoutes);
 app.use('/api/salas', salaRoutes);
 app.use('/api/reservas', reservaRoutes);
 app.use('/api/enderecos', enderecoRoutes); 

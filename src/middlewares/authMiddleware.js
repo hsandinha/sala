@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const User = require('../models/usuarioModel'); 
+const User = require('../models/userModel'); 
 
 const protect = async (req, res, next) => {
   let token;
@@ -28,7 +28,7 @@ const protect = async (req, res, next) => {
         });
       }
 
-      next();
+      next(); // Prossegue para o próximo middleware ou controller da rota
     } catch (error) {
       console.error('Erro na autenticação do token:', error);
       return res.status(401).json({
@@ -47,11 +47,11 @@ const protect = async (req, res, next) => {
 };
 
   const restrictToAdmin = (req, res, next) => {
-
-  if (req.user && req.user.role === 'admin') {
-    next(); 
+  // Assumimos que o middleware 'protect' já rodou e populou req.user
+  if (req.user && req.user.tipo_usuario === 'admin') {
+    next(); // Usuário é admin, pode prosseguir
   } else {
-    return res.status(403).json({ 
+    return res.status(403).json({ // 403 Forbidden
       status: 'fail',
       message: 'Você não tem permissão para realizar esta ação.',
     });

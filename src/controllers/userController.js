@@ -1,4 +1,4 @@
-const User = require('../models/usuarioModel'); 
+const User = require('../models/userModel'); 
 
 exports.getMe = async (req, res, next) => {
   try {
@@ -36,8 +36,8 @@ exports.updateMe = async (req, res, next) => {
 
     
     const allowedUpdates = {};
-    if (req.body.name) allowedUpdates.name = req.body.name;
-    if (req.body.phone) allowedUpdates.phone = req.body.phone;
+    if (req.body.nome) allowedUpdates.nome = req.body.nome;
+    if (req.body.telefone) allowedUpdates.telefone = req.body.telefone;
     if (req.body.cpf_cnpj) allowedUpdates.cpf_cnpj = req.body.cpf_cnpj;
     
 
@@ -73,7 +73,7 @@ exports.updateMe = async (req, res, next) => {
       },
     });
   } catch (error) {
-    if (error.name === 'ValidationError') {
+    if (error.nome === 'ValidationError') {
       const messages = Object.values(error.errors).map(val => val.message);
       console.error("UPDATEME CONTROLLER: Erro de validação:", messages.join('. '));
       return res.status(400).json({
@@ -138,7 +138,7 @@ exports.getUserById = async (req, res, next) => {
   } catch (error) {
     console.error("ERRO EM GETUSERBYID CONTROLLER:", error);
     // Se o ID não for um ObjectId válido, o Mongoose pode lançar um CastError
-    if (error.name === 'CastError') {
+    if (error.nome === 'CastError') {
         return res.status(400).json({
             status: 'fail',
             message: 'ID de usuário inválido.',
@@ -158,22 +158,25 @@ exports.updateUserByAdmin = async (req, res, next) => {
   console.log('Dados recebidos para atualização:', req.body);
 
   try {
-    const { name, email, role, phone, cpf_cnpj } = req.body;
+    // Campos que um admin pode atualizar.
+    // Excluímos a senha daqui, pois a atualização de senha deve ter um fluxo dedicado e mais seguro.
+    // O admin pode, por exemplo, alterar nome, email, tipo_usuario, telefone, cpf_cnpj.
+    const { nome, email, tipo_usuario, telefone, cpf_cnpj } = req.body;
     const updateData = {};
 
-    if (name) updateData.name = name;
-    if (email) updateData.email = email;
-    if (role) {
-      if (['user', 'admin'].includes(role)) { 
-        updateData.role = role;
+    if (nome) updateData.nome = nome;
+    if (email) updateData.email = email; // Cuidado com a unicidade do email se for alterado
+    if (tipo_usuario) {
+      if (['user', 'admin'].includes(tipo_usuario)) { // Validar se o tipo_usuario é um dos permitidos
+        updateData.tipo_usuario = tipo_usuario;
       } else {
         return res.status(400).json({
           status: 'fail',
-          message: 'Valor de "role" inválido. Deve ser "user" ou "admin".',
+          message: 'Valor de "tipo_usuario" inválido. Deve ser "user" ou "admin".',
         });
       }
     }
-    if (phone) updateData.phone = phone;
+    if (telefone) updateData.telefone = telefone;
     if (cpf_cnpj) updateData.cpf_cnpj = cpf_cnpj;
 
     if (Object.keys(updateData).length === 0) {
@@ -184,9 +187,10 @@ exports.updateUserByAdmin = async (req, res, next) => {
     }
 
     const updatedUser = await User.findByIdAndUpdate(userIdToUpdate, updateData, {
-      new: true,          
-      runValidators: true,  
-    }).select('-senha'); 
+      new: true,          // Retorna o documento modificado
+      runValidators: true,  // Roda as validações do schema
+    }).select('-password'); // Garante que a senha não seja retornada
+
     if (!updatedUser) {
       console.log(`UPDATEUSERBYADMIN CONTROLLER: Usuário com ID ${userIdToUpdate} não encontrado para atualização.`);
       return res.status(404).json({
@@ -204,14 +208,14 @@ exports.updateUserByAdmin = async (req, res, next) => {
     });
   } catch (error) {
     console.error("ERRO EM UPDATEUSERBYADMIN CONTROLLER:", error);
-    if (error.name === 'ValidationError') {
+    if (error.nome === 'ValidationError') {
       const messages = Object.values(error.errors).map(val => val.message);
       return res.status(400).json({
         status: 'fail',
         message: messages.join('. '),
       });
     }
-    if (error.name === 'CastError' && error.kind === 'ObjectId') {
+    if (error.nome === 'CastError' && error.kind === 'ObjectId') {
         return res.status(400).json({
             status: 'fail',
             message: 'ID de usuário inválido.',
@@ -248,16 +252,19 @@ exports.deleteUserByAdmin = async (req, res, next) => {
     }
 
     console.log(`DELETEUSERBYADMIN CONTROLLER: Usuário ${user.email} deletado com sucesso.`);
+    // Para operações DELETE bem-sucedidas, é comum retornar um status 204 No Content, sem corpo na resposta.
+    // Ou você pode retornar um 200 OK com uma mensagem de sucesso.
     res.status(200).json({
         status: 'success',
         message: 'Usuário deletado com sucesso.',
-        data: null 
+        data: null // Ou pode omitir 'data' ou retornar o usuário deletado se preferir
     });
-
+    // Alternativa para 204:
+    // res.status(204).send();
 
   } catch (error) {
     console.error("ERRO EM DELETEUSERBYADMIN CONTROLLER:", error);
-    if (error.name === 'CastError' && error.kind === 'ObjectId') {
+    if (error.nome === 'CastError' && error.kind === 'ObjectId') {
         return res.status(400).json({
             status: 'fail',
             message: 'ID de usuário inválido.',
@@ -270,4 +277,3 @@ exports.deleteUserByAdmin = async (req, res, next) => {
     });
   }
 };
-

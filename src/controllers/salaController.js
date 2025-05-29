@@ -31,7 +31,7 @@ exports.createSala = async (req, res, next) => {
     });
   } catch (error) {
     console.error("ERRO EM CREATESALA CONTROLLER:", error);
-    if (error.name === 'ValidationError') {
+    if (error.nome === 'ValidationError') {
       const messages = Object.values(error.errors).map(val => val.message);
       return res.status(400).json({
         status: 'fail',
@@ -99,7 +99,7 @@ exports.getSalaById = async (req, res, next) => {
     });
   } catch (error) {
     console.error("ERRO EM GETSALABYID CONTROLLER:", error);
-    if (error.name === 'CastError' && error.kind === 'ObjectId') {
+    if (error.nome === 'CastError' && error.kind === 'ObjectId') {
       return res.status(400).json({
         status: 'fail',
         message: 'ID de sala inválido.',
@@ -141,14 +141,14 @@ exports.updateSala = async (req, res, next) => {
     });
   } catch (error) {
     console.error("ERRO EM UPDATESALA CONTROLLER:", error);
-    if (error.name === 'ValidationError') {
+    if (error.nome === 'ValidationError') {
       const messages = Object.values(error.errors).map(val => val.message);
       return res.status(400).json({
         status: 'fail',
         message: messages.join(' '),
       });
     }
-    if (error.name === 'CastError' && error.kind === 'ObjectId') {
+    if (error.nome === 'CastError' && error.kind === 'ObjectId') {
       return res.status(400).json({
         status: 'fail',
         message: 'ID de sala inválido.',
@@ -194,7 +194,7 @@ exports.deleteSala = async (req, res, next) => {
 
   } catch (error) {
     console.error("ERRO EM DELETESALA CONTROLLER:", error);
-    if (error.name === 'CastError' && error.kind === 'ObjectId') {
+    if (error.nome === 'CastError' && error.kind === 'ObjectId') {
       return res.status(400).json({
         status: 'fail',
         message: 'ID de sala inválido.',

@@ -1,6 +1,6 @@
 const Pagamento = require('../models/pagamentoModel');
 const Reserva = require('../models/reservaModel');
-const User = require('../models/usuarioModel');
+const User = require('../models/userModel');
 
 exports.createPagamentoParaReserva = async (req, res, next) => {
   const { reservaId } = req.params; // ID da reserva vindo da URL
@@ -82,7 +82,7 @@ exports.createPagamentoParaReserva = async (req, res, next) => {
 
   } catch (error) {
     console.error("ERRO EM CREATEPAGAMENTOPARARESERVA:", error);
-    if (error.name === 'ValidationError') {
+    if (error.nome === 'ValidationError') {
       const messages = Object.values(error.errors).map(val => val.message);
       return res.status(400).json({
         status: 'fail',
@@ -101,7 +101,7 @@ exports.getAllPagamentosAdmin = async (req, res, next) => {
   console.log('GETALLPAGAMENTOSADMIN: Admin buscando todos os pagamentos...');
   try {
     const pagamentos = await Pagamento.find()
-      .populate('cliente_id', 'name email')
+      .populate('cliente_id', 'nome email')
       .populate('reserva_id', 'protocolo data_reserva status')
       .sort({ createdAt: -1 });
 
@@ -128,7 +128,7 @@ exports.getPagamentoByIdAdmin = async (req, res, next) => {
   console.log(`GETPAGAMENTOBYIDADMIN: Admin buscando pagamento com ID: ${pagamentoId}`);
   try {
     const pagamento = await Pagamento.findById(pagamentoId)
-      .populate('cliente_id', 'name email')
+      .populate('cliente_id', 'nome email')
       .populate('reserva_id', 'protocolo data_reserva status sala_id');
 
     if (!pagamento) {
@@ -149,7 +149,7 @@ exports.getPagamentoByIdAdmin = async (req, res, next) => {
     });
   } catch (error) {
     console.error("ERRO EM GETPAGAMENTOBYIDADMIN:", error);
-    if (error.name === 'CastError' && error.kind === 'ObjectId') {
+    if (error.nome === 'CastError' && error.kind === 'ObjectId') {
       return res.status(400).json({
         status: 'fail',
         message: 'ID de pagamento inválido.',
@@ -192,7 +192,7 @@ exports.updatePagamentoStatusAdmin = async (req, res, next) => {
       { status: newStatus }, 
       { new: true, runValidators: true }
     )
-    .populate('cliente_id', 'name email')
+    .populate('cliente_id', 'nome email')
     .populate('reserva_id', 'protocolo data_reserva status');
 
     // 4. Verificar se o pagamento foi encontrado e atualizado
@@ -212,10 +212,10 @@ exports.updatePagamentoStatusAdmin = async (req, res, next) => {
 
   } catch (error) {
     console.error("ERRO EM UPDATEPAGAMENTOSTATUSADMIN:", error);
-    if (error.name === 'CastError' && error.kind === 'ObjectId') {
+    if (error.nome === 'CastError' && error.kind === 'ObjectId') {
         return res.status(400).json({ status: 'fail', message: 'ID de pagamento inválido.'});
     }
-    if (error.name === 'ValidationError') {
+    if (error.nome === 'ValidationError') {
         const messages = Object.values(error.errors).map(val => val.message);
         return res.status(400).json({
             status: 'fail',
@@ -231,10 +231,11 @@ exports.updatePagamentoStatusAdmin = async (req, res, next) => {
 };
 
 exports.registrarPagamentoManualAdmin = async (req, res, next) => {
+  // Dados esperados no corpo: reserva_id, valor, metodo_pagamento, (opcional: data_pagamento, observacoes_admin)
   const { reserva_id, valor, metodo_pagamento, data_pagamento, observacoes_admin } = req.body;
-  const adminId = req.user.id;
+  const adminId = req.user.id; // ID do admin que está registrando
 
-  console.log(` Admin ${adminId} tentando registrar pagamento manual.`);
+  console.log(`REGISTRARPAGAMENTOMANUAL: Admin ${adminId} tentando registrar pagamento manual.`);
   console.log('Dados recebidos:', req.body);
 
   try {
@@ -257,7 +258,7 @@ exports.registrarPagamentoManualAdmin = async (req, res, next) => {
 
     // Opcional: Verificar se a reserva já tem um pagamento ou se o status permite novo pagamento
     if (reserva.status === 'confirmada' && reserva.pagamento_id) {
-        console.warn(` Reserva ${reserva_id} já está confirmada e possui um pagamento. Verifique se um novo pagamento é realmente necessário.`);
+        console.warn(`REGISTRARPAGAMENTOMANUAL: Reserva ${reserva_id} já está confirmada e possui um pagamento. Verifique se um novo pagamento é realmente necessário.`);
         // Poderia impedir ou permitir múltiplos pagamentos dependendo da regra de negócio
     }
     if (reserva.status === 'cancelada_pelo_usuario' || reserva.status === 'cancelada_pelo_admin') {
@@ -271,25 +272,25 @@ exports.registrarPagamentoManualAdmin = async (req, res, next) => {
     // 3. Criar o documento de Pagamento
     const novoPagamento = await Pagamento.create({
       reserva_id,
-      cliente_id: reserva.cliente_id, 
+      cliente_id: reserva.cliente_id, // Pega o cliente_id da reserva
       valor,
       metodo_pagamento,
-      status: 'pago', 
-      data_pagamento: data_pagamento || Date.now(),
-      id_transacao_gateway: `manual_${adminId}_${Date.now()}`,
+      status: 'pago', // Pagamento manual geralmente é registrado como 'pago'
+      data_pagamento: data_pagamento || Date.now(), // Usa a data fornecida ou a data atual
+      id_transacao_gateway: `manual_${adminId}_${Date.now()}`, // Identificador para pagamento manual
       gateway_response: { 
         registered_by: adminId,
         notes: observacoes_admin || 'Pagamento registrado manualmente pelo administrador.',
         timestamp: new Date()
       },
     });
-    console.log(` Pagamento manual ${novoPagamento._id} criado para reserva ${reserva_id}.`);
+    console.log(`REGISTRARPAGAMENTOMANUAL: Pagamento manual ${novoPagamento._id} criado para reserva ${reserva_id}.`);
 
     // 4. Atualizar a reserva: vincular o pagamento_id e mudar status para 'confirmada'
     reserva.pagamento_id = novoPagamento._id;
-    reserva.status = 'confirmada'; 
-    await reserva.save({ validateBeforeSave: false }); 
-    console.log(` Reserva ${reserva_id} atualizada com pagamento_id e status 'confirmada'.`);
+    reserva.status = 'confirmada'; // Assume que o pagamento manual confirma a reserva
+    await reserva.save({ validateBeforeSave: false }); // Evita revalidar campos não alterados na reserva
+    console.log(`REGISTRARPAGAMENTOMANUAL: Reserva ${reserva_id} atualizada com pagamento_id e status 'confirmada'.`);
 
     // 5. Enviar resposta de sucesso
     res.status(201).json({ // 201 Created para o recurso de pagamento
@@ -303,14 +304,14 @@ exports.registrarPagamentoManualAdmin = async (req, res, next) => {
 
   } catch (error) {
     console.error("ERRO EM REGISTRARPAGAMENTOMANUAL:", error);
-    if (error.name === 'ValidationError') {
+    if (error.nome === 'ValidationError') {
       const messages = Object.values(error.errors).map(val => val.message);
       return res.status(400).json({
         status: 'fail',
         message: messages.join(' '),
       });
     }
-    if (error.name === 'CastError' && error.kind === 'ObjectId') {
+    if (error.nome === 'CastError' && error.kind === 'ObjectId') {
         return res.status(400).json({ status: 'fail', message: 'ID de reserva inválido.'});
     }
     res.status(500).json({

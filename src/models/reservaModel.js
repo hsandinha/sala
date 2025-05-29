@@ -39,7 +39,7 @@ const reservaSchema = new mongoose.Schema(
     },
     cliente_id: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
+      ref: 'Usuario',
       required: [true, 'O cliente da reserva é obrigatório.'],
     },
     sala_id: {

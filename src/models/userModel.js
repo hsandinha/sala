@@ -2,7 +2,7 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 
-const usuarioSchema = new mongoose.Schema(
+const userSchema = new mongoose.Schema(
   {
     nome: {
       type: String,
@@ -44,7 +44,7 @@ const usuarioSchema = new mongoose.Schema(
 );
 
 
-usuarioSchema.pre('save', async function (next) {
+userSchema.pre('save', async function (next) {
   // Só executa esta função se a senha foi modificada (ou é nova)
   if (!this.isModified('password')) return next();
         const salt = await bcrypt.genSalt(10);
@@ -52,7 +52,7 @@ usuarioSchema.pre('save', async function (next) {
       next();
   });
 
-usuarioSchema.pre('save', async function (next) {
+userSchema.pre('save', async function (next) {
   // Só executa esta função se a senha foi modificada (ou é nova)
   if (!this.isModified('senha')) return next();
       const salt = await bcrypt.genSalt(10);
@@ -61,11 +61,11 @@ usuarioSchema.pre('save', async function (next) {
   });
 
 // Método para comparar a senha candidata com a senha no banco
-usuarioSchema.methods.comparePassword = async function (candidatePassword) {
+userSchema.methods.comparePassword = async function (candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.senha);
 };
 
-usuarioSchema.methods.createPasswordResetToken = function () {
+userSchema.methods.createPasswordResetToken = function () {
   const resetToken = crypto.randomBytes(32).toString('hex');
   this.passwordResetToken = crypto
     .createHash('sha256')
@@ -76,6 +76,6 @@ usuarioSchema.methods.createPasswordResetToken = function () {
 };
 
 
-const Usuario = mongoose.model('Usuario', usuarioSchema, 'usuarios');
+const Usuario = mongoose.model('Usuario', userSchema, 'usuarios');
 
 module.exports = Usuario;

@@ -1,4 +1,4 @@
-const Usuario = require('../models/usuarioModel');
+const User = require('../models/userModel');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
@@ -20,7 +20,7 @@ exports.signupUser = async (req, res, next) => {
       });
     }
 
-    const existingUser = await Usuario.findOne({ email });
+    const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({
         status: 'fail',
@@ -28,7 +28,7 @@ exports.signupUser = async (req, res, next) => {
       });
     }
 
-    const newUser = await Usuario.create({
+    const newUser = await User.create({
       nome,
       email,
       senha,
@@ -43,7 +43,7 @@ exports.signupUser = async (req, res, next) => {
       status: 'success',
       token,
       data: {
-        Usuario: newUser,
+        user: newUser,
       },
     });
   } catch (error) {
@@ -80,7 +80,7 @@ exports.loginUser = async (req, res, next) => {
 
     // Verifica se o usuário existe E buscar a senha
     console.log('LOGIN CONTROLLER: Buscando usuário...'); 
-    const user = await Usuario.findOne({ email }).select('+senha');
+    const user = await User.findOne({ email }).select('+senha');
 
     if (!user) {
       console.log('LOGIN CONTROLLER: Usuário não encontrado com o email:', email);
@@ -137,7 +137,7 @@ exports.signupAdmin = async (req, res, next) => {
   try {
 
 
-    const { nome, email, senha, phone, cpf_cnpj } = req.body;
+    const { nome, email, senha, telefone, cpf_cnpj } = req.body;
 
     // Verifica se todos os campos obrigatórios foram enviados
     if (!nome || !email || !senha) {
@@ -160,7 +160,7 @@ exports.signupAdmin = async (req, res, next) => {
       nome,
       email,
       senha,
-      phone,  
+      telefone,  
       cpf_cnpj, 
       role: 'admin',
     });
@@ -195,31 +195,34 @@ exports.signupAdmin = async (req, res, next) => {
 };
 
 exports.forgotPassword = async (req, res, next) => {
-  console.log('FORGOT SENHA CONTROLLER: Iniciando processo...');
+  console.log('FORGOT PASSWORD CONTROLLER: Iniciando processo...');
   try {
-    const user = await Usuario.findOne({ email: req.body.email });
+    //  Obter o usuário com base no email enviado
+    const user = await User.findOne({ email: req.body.email });
 
     if (!user) {
-      console.log('FORGOT SENHA CONTROLLER: Email não encontrado, mas enviando resposta genérica.');
+      console.log('FORGOT PASSWORD CONTROLLER: Email não encontrado, mas enviando resposta genérica.');
       return res.status(200).json({
         status: 'success',
         message: 'Se o email estiver em nosso sistema, um link para redefinição de senha foi enviado.',
       });
     }
 
+    //  Gerar o novo token de reset aleatório
     const resetToken = user.createPasswordResetToken();
     await user.save({ validateBeforeSave: false });
 
-    const resetURLFrontend = `http://localhost:3000/reset-senha/${resetToken}`; // Ajuste a porta do frontend se necessário
+    // "Enviar" o token para o email do usuário (aqui vamos apenas logar)
+    const resetURLFrontend = `http://localhost:3000/reset-password/${resetToken}`;
 
     console.log('--------------------------------------------------------------------');
-    console.log('FORGOT SENHA CONTROLLER: SIMULAÇÃO DE ENVIO DE EMAIL');
-    console.log(`Email para: ${user.email}`);
+    console.log('FORGOT PASSWORD CONTROLLER: SIMULAÇÃO DE ENVIO DE EMAIL');
     console.log(`Token de reset (não hasheado, para usar no teste): ${resetToken}`);
     console.log(`URL de reset (para um frontend hipotético): ${resetURLFrontend}`);
     console.log('Token hasheado salvo no DB:', user.passwordResetToken);
     console.log('Expiração do token salvo no DB:', user.passwordResetExpires);
     console.log('--------------------------------------------------------------------');
+    // Aqui você integraria um serviço de email para enviar resetURLFrontend ao user.email
 
     res.status(200).json({
       status: 'success',
@@ -227,7 +230,8 @@ exports.forgotPassword = async (req, res, next) => {
     });
 
   } catch (error) {
-    console.error("ERRO EM FORGOT SENHA CONTROLLER:", error);
+
+    console.error("ERRO EM FORGOT PASSWORD CONTROLLER:", error);
     res.status(500).json({
       status: 'error',
       message: 'Erro ao processar a solicitação de esqueci a senha.',
@@ -237,31 +241,34 @@ exports.forgotPassword = async (req, res, next) => {
 };
 
 exports.resetPassword = async (req, res, next) => {
-  console.log('RESET SENHA CONTROLLER: Iniciando processo...');
+  console.log('RESET PASSWORD CONTROLLER: Iniciando processo...');
   try {
+    // Obter o usuário com base no token
     const unhashedTokenFromURL = req.params.token;
     const hashedTokenForDB = crypto
       .createHash('sha256')
       .update(unhashedTokenFromURL)
       .digest('hex');
 
-    console.log('RESET SENHA CONTROLLER: Token da URL (original):', unhashedTokenFromURL);
-    console.log('RESET SENHA CONTROLLER: Token hasheado para busca no DB:', hashedTokenForDB);
+    console.log('RESET PASSWORD CONTROLLER: Token da URL (original):', unhashedTokenFromURL);
+    console.log('RESET PASSWORD CONTROLLER: Token hasheado para busca no DB:', hashedTokenForDB);
 
-    const user = await Usuario.findOne({
+    // Encontrar o usuário que tem este token hasheado E o token ainda não expirou
+    const user = await User.findOne({
       passwordResetToken: hashedTokenForDB,
-      passwordResetExpires: { $gt: Date.now() },
+      passwordResetExpires: { $gt: Date.now() }, // Verifica se a data de expiração é MAIOR que a data/hora atual
     });
 
+    // Se o token não for válido ou tiver expirado, ou usuário não encontrado
     if (!user) {
-      console.log('RESET SENHA CONTROLLER: Token inválido ou expirado.');
-      return res.status(400).json({
+      console.log('RESET PASSWORD CONTROLLER: Token inválido ou expirado.');
+      return res.status(400).json({ // 400 Bad Request
         status: 'fail',
         message: 'Token inválido ou expirado. Por favor, solicite um novo reset de senha.',
       });
     }
 
-    // Assumindo que o frontend envia 'senha' e 'senhaConfirm'
+    // Se o token é válido, definir a nova senha
     if (!req.body.senha || !req.body.senhaConfirm) {
         return res.status(400).json({
             status: 'fail',
@@ -274,21 +281,21 @@ exports.resetPassword = async (req, res, next) => {
             message: 'As senhas não coincidem.'
         });
     }
-
     user.senha = req.body.senha;
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
-    await user.save(); 
+    await user.save();
 
-    console.log('RESET SENHA CONTROLLER: Senha resetada com sucesso para:', user.email);
+
+    console.log('RESET PASSWORD CONTROLLER: Senha resetada com sucesso para:', user.email);
     res.status(200).json({
       status: 'success',
       message: 'Senha resetada com sucesso! Você já pode fazer login com sua nova senha.',
     });
 
   } catch (error) {
-    console.error("ERRO EM RESET SENHA CONTROLLER:", error);
-    if (error.name === 'ValidationError') { // CORRIGIDO para error.name
+    console.error("ERRO EM RESET PASSWORD CONTROLLER:", error);
+    if (error.nome === 'ValidationError') { 
         const messages = Object.values(error.errors).map(val => val.message);
         return res.status(400).json({
             status: 'fail',
