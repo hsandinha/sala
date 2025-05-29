@@ -10,9 +10,6 @@ Aplicativo destinado para reserva do espaço para reuniões e trabalho.
 
 * Herbert Sandinha
 
-## Orientador
-
-* Sinaide Nunes Bezerra
 
 ## Instruções de utilização
 
